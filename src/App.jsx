@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { PackageProvider } from './context/PackageContext'
 import { CRMProvider }     from './context/CRMContext'
@@ -15,12 +15,20 @@ import Leads        from './pages/crm/Leads'
 import Bookings     from './pages/crm/Bookings'
 import BookingDetail from './pages/crm/BookingDetail'
 
-// Public pages (no auth)
+// Auth & Public
+import Login       from './pages/Login'
 import BookingForm from './pages/BookingForm'
+
+// Layout
+import MainLayout from './components/MainLayout'
 
 // Styles
 import './styles/index.css'
-import './styles/crm.css'
+
+const ProtectedRoute = ({ children }) => {
+  const isAuth = localStorage.getItem('shara_auth') === 'true'
+  return isAuth ? <MainLayout>{children}</MainLayout> : <Navigate to="/login" replace />
+}
 
 export default function App() {
   return (
@@ -29,19 +37,21 @@ export default function App() {
         <CRMProvider>
           <BookingProvider>
             <Routes>
-              {/* ── Itinerary Maker ── */}
-              <Route path="/"           element={<Home />} />
-              <Route path="/editor/:id" element={<Editor />} />
-              <Route path="/admin"      element={<Admin />} />
+              {/* ── Public ── */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/booking/form/:token" element={<BookingForm />} />
 
-              {/* ── CRM ── */}
-              <Route path="/crm"                  element={<Dashboard />} />
-              <Route path="/crm/leads"            element={<Leads />} />
-              <Route path="/crm/bookings"         element={<Bookings />} />
-              <Route path="/crm/bookings/:id"     element={<BookingDetail />} />
-
-              {/* ── Public (customer-facing) ── */}
-              <Route path="/booking/form/:token"  element={<BookingForm />} />
+              {/* ── Protected Dashboard ── */}
+              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              <Route path="/editor/:id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              
+              <Route path="/crm/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+              <Route path="/crm/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+              <Route path="/crm/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
+              
+              {/* Redirect /crm to home dashboard */}
+              <Route path="/crm" element={<Navigate to="/" replace />} />
             </Routes>
 
             <Toaster

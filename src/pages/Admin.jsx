@@ -46,8 +46,7 @@ export default function Admin() {
   }, [])
 
   const handleTestConnect = async () => {
-    if (!sbUrl || !sbKey) { toast.error('URL aur API Key dono bharo'); return }
-    if (!sbUrl.startsWith('https://')) { toast.error('URL https:// se start honi chahiye'); return }
+    if (!sbUrl || !sbKey) { toast.error('URL aur API Key fill karo'); return }
     setTesting(true)
     try {
       const testClient = createClient(sbUrl.trim(), sbKey.trim())
@@ -55,270 +54,240 @@ export default function Admin() {
       if (error && error.code !== 'PGRST116' && error.code !== '42P01') throw error
       saveCredentials(sbUrl.trim(), sbKey.trim())
       setConnected(true)
-      toast.success('Connected! App reload ho raha hai...')
-      setTimeout(() => { window.location.href = '/' }, 1800)
+      toast.success('Connected! Reloading app...')
+      setTimeout(() => { window.location.href = '/' }, 1500)
     } catch (e) {
-      toast.error('Connection fail: ' + (e.message || 'Credentials check karo'))
+      toast.error('Connection fail: ' + (e.message || 'Check credentials'))
       setConnected(false)
     }
     setTesting(false)
   }
 
   const handleDisconnect = () => {
-    if (!window.confirm('Supabase se disconnect karo? App local storage use karegi.')) return
+    if (!window.confirm('Disconnect from Supabase?')) return
     clearCredentials()
     setConnected(false)
     setSbUrl('')
     setSbKey('')
-    toast.success('Disconnected. Local storage mode.')
+    toast.success('Disconnected.')
     setTimeout(() => window.location.reload(), 1000)
   }
 
   const saveCompany = () => {
     localStorage.setItem('company_defaults', JSON.stringify(company))
-    toast.success('Company info save ho gayi!')
+    toast.success('Company info saved!')
   }
 
   const saveTemplates = () => {
     localStorage.setItem('price_templates', JSON.stringify(templates))
-    toast.success('Price templates save ho gaye!')
-  }
-
-  const addTemplateRow = () => {
-    setTemplates([...templates, { pax_type: '', age_limit: '', price: 0 }])
-  }
-
-  const updateTemplate = (i, field, value) => {
-    const updated = [...templates]
-    updated[i] = { ...updated[i], [field]: value }
-    setTemplates(updated)
-  }
-
-  const removeTemplate = (i) => {
-    setTemplates(templates.filter((_, idx) => idx !== i))
+    toast.success('Price templates saved!')
   }
 
   return (
-    <>
-      <Topbar mode="admin" />
-      <div className="admin-page">
-
-        {/* ── PAGE HEADER ── */}
-        <div className="admin-page-header">
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>
-            ← Wapas
-          </button>
-          <div>
-            <h1 className="admin-title">⚙️ Admin Settings</h1>
-            <p className="admin-sub">Database connect karo, company info aur default prices set karo</p>
-          </div>
+    <div className="page-content">
+      <div className="dashboard-header">
+        <div>
+          <h1 className="text-gradient">Settings & Admin</h1>
+          <p className="text-muted">Configure your workspace defaults and database connection.</p>
         </div>
+      </div>
 
-        {/* ── SUPABASE CONNECTION ── */}
-        <div className="admin-card">
-          <div className="admin-card-head">
-            <div className="admin-card-icon">🗄️</div>
-            <div style={{ flex: 1 }}>
-              <div className="admin-card-title">Supabase Database</div>
-              <div className="admin-card-desc">Cloud database se connect karo — sab data cloud mein save hoga</div>
-            </div>
-            <div className={`conn-badge ${connected ? 'conn-ok' : 'conn-off'}`}>
-              <span className="conn-dot" />
-              {connected ? 'Connected' : 'Offline Mode'}
-            </div>
+      <div className="admin-sections-grid">
+        {/* Supabase Connection */}
+        <section className="glass-card settings-card">
+          <div className="settings-head">
+             <div className="settings-icon">🗄️</div>
+             <div>
+               <h3>Supabase Database</h3>
+               <p className="text-dim">Connect your cloud database for real-time sync.</p>
+             </div>
+             <div className={`status-pill ${connected ? 'saved' : 'unsaved'}`}>
+               {connected ? 'Connected' : 'Disconnected'}
+             </div>
           </div>
 
-          {connected ? (
-            <div className="admin-connected-info">
-              <div className="conn-url-display">
-                <span>🔗</span>
-                <span className="conn-url-text">{sbUrl || 'Supabase connected'}</span>
-              </div>
-              <button className="btn btn-danger btn-sm" onClick={handleDisconnect}>
-                Disconnect
-              </button>
+          <div className="settings-form">
+            <div className="form-field">
+              <label>Project URL</label>
+              <input 
+                className="glass-input" 
+                placeholder="https://xxx.supabase.co" 
+                value={sbUrl}
+                onChange={e => setSbUrl(e.target.value)}
+              />
             </div>
-          ) : (
-            <div className="admin-form">
-              <div className="admin-tip" style={{ borderLeft: '4px solid #F59E0B', background: '#FFFBEB', color: '#92400E' }}>
-                <strong>⚠️ IMPORTANT:</strong> Pehle <code>supabase-schema.sql</code> (project root mein) ko Supabase SQL Editor mein run karo.
-                <br />Uss file mein <strong>"disable row level security"</strong> wali lines hona zaroori hai, warna save nahi hoga!
-              </div>
-              <div className="admin-form-grid">
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label>Project URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://xxxxxxxxxxxx.supabase.co"
-                    value={sbUrl}
-                    onChange={e => setSbUrl(e.target.value)}
-                  />
-                </div>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <label>Anon / Public Key</label>
-                  <input
-                    type="password"
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    value={sbKey}
-                    onChange={e => setSbKey(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button
-                className="btn btn-primary btn-block"
-                onClick={handleTestConnect}
-                disabled={testing}
-              >
-                {testing ? '⏳ Testing...' : '🔌 Test & Connect'}
-              </button>
+            <div className="form-field">
+              <label>API Key (Anon)</label>
+              <input 
+                className="glass-input" 
+                type="password"
+                placeholder="eyJhbGciOiJIUzI1Ni..." 
+                value={sbKey}
+                onChange={e => setSbKey(e.target.value)}
+              />
             </div>
-          )}
-        </div>
+            <div className="form-actions">
+              {connected ? (
+                <button className="btn btn-ghost" onClick={handleDisconnect}>Disconnect</button>
+              ) : (
+                <button className="btn btn-primary" onClick={handleTestConnect} disabled={testing}>
+                  {testing ? 'Testing...' : 'Connect Cloud'}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
 
-        {/* ── COMPANY DEFAULTS ── */}
-        <div className="admin-card">
-          <div className="admin-card-head">
-            <div className="admin-card-icon">🏢</div>
-            <div>
-              <div className="admin-card-title">Company Info</div>
-              <div className="admin-card-desc">Har naye package mein yeh info automatically bharo</div>
-            </div>
+        {/* Company Info */}
+        <section className="glass-card settings-card">
+          <div className="settings-head">
+             <div className="settings-icon">🏢</div>
+             <div>
+               <h3>Company Profile</h3>
+               <p className="text-dim">Your brand details for itineraries.</p>
+             </div>
           </div>
-          <div className="admin-form">
-            <div className="admin-form-grid">
-              <div className="field">
-                <label>Company Name</label>
-                <input
-                  value={company.name}
-                  placeholder="Shera Travels"
-                  onChange={e => setCompany({ ...company, name: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Phone</label>
-                <input
-                  value={company.phone}
-                  placeholder="+91-XXXXXXXXXX"
-                  onChange={e => setCompany({ ...company, phone: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Email</label>
-                <input
-                  value={company.email}
-                  placeholder="info@example.com"
-                  onChange={e => setCompany({ ...company, email: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Address</label>
-                <input
-                  value={company.addr}
-                  placeholder="City, State, India"
-                  onChange={e => setCompany({ ...company, addr: e.target.value })}
-                />
-              </div>
-            </div>
-            <button className="btn btn-success" onClick={saveCompany}>
-              ✓ Company Info Save Karo
-            </button>
-          </div>
-        </div>
 
-        {/* ── DEFAULT PRICE TEMPLATES ── */}
-        <div className="admin-card">
-          <div className="admin-card-head">
-            <div className="admin-card-icon">💰</div>
-            <div>
-              <div className="admin-card-title">Default Price Rates</div>
-              <div className="admin-card-desc">Naya package banane par yeh prices automatically add honge</div>
+          <div className="settings-form split">
+            <div className="form-field">
+              <label>Name</label>
+              <input className="glass-input" value={company.name} onChange={e => setCompany({...company, name: e.target.value})} />
+            </div>
+            <div className="form-field">
+              <label>Email</label>
+              <input className="glass-input" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} />
+            </div>
+            <div className="form-field full">
+              <label>Address</label>
+              <input className="glass-input" value={company.addr} onChange={e => setCompany({...company, addr: e.target.value})} />
+            </div>
+            <div className="form-actions full">
+              <button className="btn btn-primary" onClick={saveCompany}>Save Company Info</button>
             </div>
           </div>
-          <div className="admin-form">
-            <table className="price-table">
+        </section>
+
+        {/* Price Templates */}
+        <section className="glass-card settings-card full-width">
+           <div className="settings-head">
+             <div className="settings-icon">💰</div>
+             <div>
+               <h3>Default Price Templates</h3>
+               <p className="text-dim">Pre-fill package pricing for faster creation.</p>
+             </div>
+          </div>
+          
+          <div className="settings-table-wrap">
+            <table className="modern-table">
               <thead>
                 <tr>
-                  <th>Pax Type</th>
+                  <th>Passenger Type</th>
                   <th>Age Limit</th>
-                  <th>Price (₹)</th>
+                  <th>Base Price (₹)</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {templates.map((row, i) => (
+                {templates.map((t, i) => (
                   <tr key={i}>
-                    <td>
-                      <input
-                        value={row.pax_type}
-                        placeholder="Adult"
-                        onChange={e => updateTemplate(i, 'pax_type', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        value={row.age_limit}
-                        placeholder="Above 12 years"
-                        onChange={e => updateTemplate(i, 'age_limit', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <div className="price-input-wrap">
-                        <span className="price-rupee">₹</span>
-                        <input
-                          type="number"
-                          value={row.price}
-                          placeholder="17500"
-                          min="0"
-                          onChange={e => updateTemplate(i, 'price', Number(e.target.value))}
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <button className="btn btn-danger btn-sm" onClick={() => removeTemplate(i)}>✕</button>
-                    </td>
+                    <td><input className="table-inline-input" value={t.pax_type} onChange={e => {
+                      const up = [...templates]; up[i].pax_type = e.target.value; setTemplates(up);
+                    }} /></td>
+                    <td><input className="table-inline-input" value={t.age_limit} onChange={e => {
+                      const up = [...templates]; up[i].age_limit = e.target.value; setTemplates(up);
+                    }} /></td>
+                    <td><input className="table-inline-input" type="number" value={t.price} onChange={e => {
+                      const up = [...templates]; up[i].price = Number(e.target.value); setTemplates(up);
+                    }} /></td>
+                    <td><button className="icon-btn" onClick={() => setTemplates(templates.filter((_, idx) => idx !== i))}>✕</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-
-            <div className="admin-template-actions">
-              <button className="btn btn-ghost btn-sm" onClick={addTemplateRow}>+ Row Add Karo</button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => setTemplates(DEFAULT_PRICE_TEMPLATES)}
-              >
-                ↺ Reset
-              </button>
-              <button className="btn btn-success" onClick={saveTemplates}>
-                ✓ Templates Save Karo
-              </button>
+            <div className="form-actions-row">
+              <button className="btn btn-ghost" onClick={() => setTemplates([...templates, {pax_type:'', age_limit:'', price:0}])}>+ Add Row</button>
+              <button className="btn btn-primary" onClick={saveTemplates}>Save Pricing Templates</button>
             </div>
           </div>
-        </div>
-
-        {/* ── QUICK LINKS ── */}
-        <div className="admin-card admin-card-links">
-          <div className="admin-card-head">
-            <div className="admin-card-icon">🔗</div>
-            <div>
-              <div className="admin-card-title">Quick Links</div>
-              <div className="admin-card-desc">Useful resources</div>
-            </div>
-          </div>
-          <div className="admin-links-grid">
-            <a className="admin-link-item" href="https://supabase.com/dashboard" target="_blank" rel="noreferrer">
-              <span className="admin-link-icon">🗄️</span>
-              <span>Supabase Dashboard</span>
-              <span className="admin-link-arrow">→</span>
-            </a>
-            <div className="admin-link-item" style={{ cursor: 'default', opacity: 0.6 }}>
-              <span className="admin-link-icon">📄</span>
-              <span>supabase-schema.sql (project root)</span>
-            </div>
-          </div>
-        </div>
-
+        </section>
       </div>
-    </>
+
+      <style jsx>{`
+        .admin-sections-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+
+        .full-width {
+          grid-column: 1 / -1;
+        }
+
+        @media (max-width: 1024px) {
+          .admin-sections-grid { grid-template-columns: 1fr; }
+        }
+
+        .settings-card { padding: 32px; }
+
+        .settings-head {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 32px;
+        }
+
+        .settings-icon {
+          width: 52px;
+          height: 52px;
+          background: rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          font-size: 24px;
+        }
+
+        .settings-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .settings-form.split {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+
+        .form-field { display: flex; flex-direction: column; gap: 8px; }
+        .form-field label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+        .full { grid-column: 1 / -1; }
+
+        .form-actions { margin-top: 12px; }
+        .form-actions-row { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-glass); }
+
+        .table-inline-input {
+          background: none;
+          border: none;
+          color: #fff;
+          font-family: inherit;
+          font-size: 14px;
+          width: 100%;
+          outline: none;
+          padding: 8px 0;
+        }
+
+        .status-pill {
+           margin-left: auto;
+           padding: 4px 12px;
+           border-radius: 20px;
+           font-size: 11px;
+           font-weight: 700;
+           background: rgba(255, 255, 255, 0.05);
+        }
+        .status-pill.saved { color: #10b981; }
+        .status-pill.unsaved { color: #f59e0b; }
+      `}</style>
+    </div>
   )
 }

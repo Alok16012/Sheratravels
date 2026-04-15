@@ -27,12 +27,10 @@ export default function BookingForm() {
   })
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
-  // Load booking by token
   useEffect(() => {
     fetchBookingByToken(token).then(b => {
       if (!b) { setNotFound(true); setLoading(false); return }
       setBooking(b)
-      // Pre-fill from booking
       setForm({
         customer_name:      b.customer_name      || '',
         customer_email:     b.customer_email     || '',
@@ -48,7 +46,6 @@ export default function BookingForm() {
     })
   }, [token, fetchBookingByToken])
 
-  const totalPax   = (parseInt(form.adults) || 0) + (parseInt(form.children) || 0) + (parseInt(form.infants) || 0)
   const totalAmt   = booking ? Number(booking.total_amount) : 0
   const advancePct = booking ? Number(booking.advance_percent || 20) : 20
   const advanceAmt = Math.round((totalAmt * advancePct) / 100)
@@ -56,18 +53,11 @@ export default function BookingForm() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    if (!form.customer_name.trim()) return
-    // Save updated details
     const updated = await updateFromPublicForm(token, {
-      customer_name:     form.customer_name,
-      customer_email:    form.customer_email,
-      customer_phone:    form.customer_phone,
-      customer_whatsapp: form.customer_whatsapp,
-      adults:            parseInt(form.adults)   || 0,
-      children:          parseInt(form.children) || 0,
-      infants:           parseInt(form.infants)  || 0,
-      travel_date:       form.travel_date,
-      return_date:       form.return_date,
+      ...form, 
+      adults: parseInt(form.adults), 
+      children: parseInt(form.children), 
+      infants: parseInt(form.infants)
     })
     if (updated) setBooking(updated)
     setStep('summary')
@@ -75,16 +65,15 @@ export default function BookingForm() {
 
   const handlePayNow = async () => {
     if (!isRazorpayConfigured) {
-      toast.error('Online payment is not configured. Please contact the agency.')
+      toast.error('Payment system offline. Please contact us.')
       return
     }
     setPaying(true)
     try {
       const response = await openRazorpayCheckout({
         amount:  advanceAmt,
-        booking: { ...booking, ...form, company_name: booking.packages?.company_name || 'Shera Travels' },
+        booking: { ...booking, ...form, company_name: 'Shera Travels' },
       })
-      // Record payment
       await recordPayment(booking.id, {
         amount: advanceAmt,
         type:   'advance',
@@ -92,12 +81,6 @@ export default function BookingForm() {
         razorpay_payment_id: response.razorpay_payment_id,
         razorpay_order_id:   response.razorpay_order_id,
       })
-      // Send invoice email if configured
-      if (isEmailConfigured && booking.customer_email) {
-        try {
-          await sendInvoiceEmail(booking, [])
-        } catch (_) { /* silently ignore */ }
-      }
       setStep('paid')
     } catch (err) {
       if (err.message !== 'Payment cancelled by user') toast.error(err.message)
@@ -105,213 +88,154 @@ export default function BookingForm() {
     setPaying(false)
   }
 
-  // ── LOADING ──────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div style={pageStyle}>
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <div style={spinnerStyle} />
-          <p style={{ color: '#64748B', marginTop: 16 }}>Loading booking details…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <div className="public-loading"><div className="spinner" /></div>
 
-  // ── NOT FOUND ─────────────────────────────────────────────
-  if (notFound) {
-    return (
-      <div style={pageStyle}>
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 48 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>❓</div>
-          <h2 style={{ color: '#0F172A', marginBottom: 8 }}>Booking Not Found</h2>
-          <p style={{ color: '#64748B', fontSize: 14 }}>This booking link is invalid or has expired. Please contact Shera Travels.</p>
-        </div>
-      </div>
-    )
-  }
+  if (notFound) return (
+    <div className="public-canvas">
+       <div className="glass-card error-box">
+          <h2>Link Expired</h2>
+          <p>Please contact Shera Travels for a new booking link.</p>
+       </div>
+    </div>
+  )
 
-  // ── PAID SUCCESS ──────────────────────────────────────────
-  if (step === 'paid') {
-    return (
-      <div style={pageStyle}>
-        <div style={headerStyle}>
-          <div style={{ fontSize: 18, fontWeight: 900 }}>✈️ Shera Travels</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>{booking.packages?.company_name || 'Let\'s Travel The World'}</div>
-        </div>
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 48, maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-          <h2 style={{ color: '#059669', fontSize: 22, fontWeight: 900, marginBottom: 8 }}>Payment Successful!</h2>
-          <div style={{ color: '#0F172A', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{booking.booking_ref}</div>
-          <p style={{ color: '#64748B', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
-            Your advance payment of <strong style={{ color: '#10B981' }}>{fmt(advanceAmt)}</strong> has been received.
-            A confirmation email will be sent to <strong>{form.customer_email || 'your email'}</strong>.
-          </p>
-          <div style={{ background: '#F0FDF4', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
-            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 700, marginBottom: 6 }}>BALANCE DUE</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#F59E0B' }}>{fmt(balanceAmt)}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>To be paid before travel date</div>
-          </div>
-          <p style={{ color: '#94A3B8', fontSize: 13 }}>
-            For any queries, contact us at <strong>{booking.packages?.company_phone || '+91-9149406965'}</strong>
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const StepIndicator = ({ current }) => (
+    <div className="step-bar">
+       <div className={`step-dot ${step === 'form' ? 'active' : 'done'}`}>1</div>
+       <div className="step-line" />
+       <div className={`step-dot ${step === 'summary' ? 'active' : step === 'paid' ? 'done' : ''}`}>2</div>
+       <div className="step-line" />
+       <div className={`step-dot ${step === 'paid' ? 'active' : ''}`}>3</div>
+    </div>
+  )
 
-  // ── SUMMARY ───────────────────────────────────────────────
-  if (step === 'summary') {
-    return (
-      <div style={pageStyle}>
-        <div style={headerStyle}>
-          <div style={{ fontSize: 18, fontWeight: 900 }}>✈️ Shera Travels</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>Booking Summary</div>
-        </div>
-        <div style={{ maxWidth: 520, margin: '0 auto' }}>
-          <div style={cardStyle}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 20 }}>
-              📋 Booking Summary
-            </h3>
-
-            {/* Trip info */}
-            <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
-              <div style={rowStyle}><span style={labelStyle}>Package</span><span style={valStyle}>{booking.packages?.title || 'Tour Package'}</span></div>
-              <div style={rowStyle}><span style={labelStyle}>Destination</span><span style={valStyle}>{booking.destination || '—'}</span></div>
-              <div style={rowStyle}><span style={labelStyle}>Travel Date</span><span style={valStyle}>{form.travel_date ? new Date(form.travel_date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}) : '—'}</span></div>
-              <div style={rowStyle}><span style={labelStyle}>Pax</span><span style={valStyle}>{form.adults} Adults{form.children > 0 ? `, ${form.children} Children` : ''}{form.infants > 0 ? `, ${form.infants} Infants` : ''}</span></div>
-            </div>
-
-            {/* Payment breakdown */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ ...rowStyle, padding: '10px 0', borderBottom: '1px solid #E2E8F0' }}>
-                <span style={{ color: '#64748B', fontSize: 14 }}>Total Package Amount</span>
-                <span style={{ fontWeight: 800, fontSize: 16, color: '#0F172A' }}>{fmt(totalAmt)}</span>
-              </div>
-              <div style={{ ...rowStyle, padding: '10px 0', borderBottom: '1px solid #E2E8F0' }}>
-                <span style={{ color: '#64748B', fontSize: 14 }}>Advance to Pay Now ({advancePct}%)</span>
-                <span style={{ fontWeight: 800, fontSize: 18, color: '#10B981' }}>{fmt(advanceAmt)}</span>
-              </div>
-              <div style={{ ...rowStyle, padding: '10px 0' }}>
-                <span style={{ color: '#64748B', fontSize: 14 }}>Balance (pay later)</span>
-                <span style={{ fontWeight: 800, fontSize: 16, color: '#F59E0B' }}>{fmt(balanceAmt)}</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button onClick={handlePayNow} disabled={paying} style={payBtnStyle}>
-                {paying ? '⏳ Opening payment...' : `💳 Pay Advance Now — ${fmt(advanceAmt)}`}
-              </button>
-              <button onClick={() => setStep('form')} style={ghostBtnStyle}>
-                ← Edit Details
-              </button>
-            </div>
-
-            {!isRazorpayConfigured && (
-              <div style={{ marginTop: 14, padding: '10px 14px', background: '#FFFBEB', borderRadius: 8, fontSize: 12, color: '#92400E' }}>
-                Online payment is currently unavailable. Please contact Shera Travels to complete payment.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── FORM ──────────────────────────────────────────────────
   return (
-    <div style={pageStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <div style={{ fontSize: 18, fontWeight: 900 }}>✈️ Shera Travels</div>
-        <div style={{ fontSize: 12, opacity: 0.8 }}>{booking.destination ? `${booking.destination} Tour` : 'Tour Booking'}</div>
+    <div className="public-canvas">
+      <div className="branding-top">
+         <h3>✈️ Shera Travels</h3>
+         <p>Personalized Booking Desk</p>
       </div>
 
-      <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        {/* Trip card */}
-        <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg,#4F6EF7,#6366F1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-              ✈️
-            </div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: '#0F172A' }}>{booking.packages?.title || 'Kashmir Tour Package'}</div>
-              <div style={{ fontSize: 13, color: '#64748B' }}>{booking.destination} • {booking.nights || booking.packages?.nights || 0} Nights</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#4F6EF7' }}>
-              💰 Total: {fmt(totalAmt)}
-            </div>
-            <div style={{ background: '#ECFDF5', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#10B981' }}>
-              Pay Now: {fmt(advanceAmt)} ({advancePct}%)
-            </div>
-          </div>
-        </div>
+      <StepIndicator />
 
-        {/* Form */}
-        <div style={cardStyle}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 20 }}>
-            Fill Your Details
-          </h3>
-          <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={formSectionStyle}>Contact Details</div>
-            <div style={gridStyle}>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>Full Name *</label>
-                <input style={inputStyle} required placeholder="Apna naam likhein" value={form.customer_name} onChange={e => set('customer_name', e.target.value)} />
-              </div>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>Email</label>
-                <input style={inputStyle} type="email" placeholder="email@example.com" value={form.customer_email} onChange={e => set('customer_email', e.target.value)} />
-              </div>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>Phone</label>
-                <input style={inputStyle} placeholder="+91 98765 43210" value={form.customer_phone} onChange={e => set('customer_phone', e.target.value)} />
-              </div>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>WhatsApp</label>
-                <input style={inputStyle} placeholder="+91 98765 43210" value={form.customer_whatsapp} onChange={e => set('customer_whatsapp', e.target.value)} />
-              </div>
-            </div>
-
-            <div style={formSectionStyle}>Travel Details</div>
-            <div style={gridStyle}>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>Travel Date</label>
-                <input style={inputStyle} type="date" value={form.travel_date} onChange={e => set('travel_date', e.target.value)} />
-              </div>
-              <div style={fieldStyle}>
-                <label style={labelStyleForm}>Return Date</label>
-                <input style={inputStyle} type="date" value={form.return_date} onChange={e => set('return_date', e.target.value)} />
-              </div>
-            </div>
-
-            <div style={formSectionStyle}>Travellers</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              {[
-                { label: 'Adults (12+)',     field: 'adults' },
-                { label: 'Children (5–12)', field: 'children' },
-                { label: 'Infants (<5)',    field: 'infants' },
-              ].map(({ label, field }) => (
-                <div key={field} style={fieldStyle}>
-                  <label style={labelStyleForm}>{label}</label>
-                  <input style={inputStyle} type="number" min="0" value={form[field]}
-                    onChange={e => set(field, parseInt(e.target.value) || 0)} />
+      <div className="public-content-wrap">
+        {step === 'form' && (
+          <div className="form-scene animate-in">
+             <div className="glass-card pkg-summary-card">
+                <div className="pkg-info">
+                   <span className="badge">Limited Offer</span>
+                   <h2>{booking.packages?.title || 'Custom Tour'}</h2>
+                   <div className="price-tag-big">{fmt(totalAmt)}</div>
                 </div>
-              ))}
-            </div>
+             </div>
 
-            <button type="submit" style={{ ...payBtnStyle, marginTop: 4 }}>
-              Continue to Payment →
-            </button>
-          </form>
-        </div>
+             <form className="glass-card main-booking-form" onSubmit={handleFormSubmit}>
+                <h3>Passenger Information</h3>
+                <div className="input-row">
+                   <div className="field"><label>Full Name</label><input required className="glass-input" value={form.customer_name} onChange={e => set('customer_name', e.target.value)} /></div>
+                   <div className="field"><label>Email</label><input required className="glass-input" type="email" value={form.customer_email} onChange={e => set('customer_email', e.target.value)} /></div>
+                </div>
+                <div className="input-row">
+                   <div className="field"><label>Phone</label><input required className="glass-input" value={form.customer_phone} onChange={e => set('customer_phone', e.target.value)} /></div>
+                   <div className="field"><label>WhatsApp</label><input className="glass-input" value={form.customer_whatsapp} onChange={e => set('customer_whatsapp', e.target.value)} /></div>
+                </div>
+                <div className="input-row split-3">
+                   <div className="field"><label>Adults</label><input className="glass-input" type="number" min="1" value={form.adults} onChange={e => set('adults', e.target.value)} /></div>
+                   <div className="field"><label>Children</label><input className="glass-input" type="number" min="0" value={form.children} onChange={e => set('children', e.target.value)} /></div>
+                   <div className="field"><label>Infants</label><input className="glass-input" type="number" min="0" value={form.infants} onChange={e => set('infants', e.target.value)} /></div>
+                </div>
+                <button type="submit" className="btn btn-primary full-btn">Confirm Details →</button>
+             </form>
+          </div>
+        )}
 
-        <p style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 16, lineHeight: 1.6 }}>
-          Secure booking powered by Shera Travels<br/>
-          📞 {booking.packages?.company_phone || '+91-9149406965'}
-        </p>
+        {step === 'summary' && (
+          <div className="summary-scene animate-in">
+             <div className="glass-card summary-card">
+                <h2>Total Summary</h2>
+                <div className="summary-list">
+                   <div className="sum-row"><span>Total Package Cost</span><span>{fmt(totalAmt)}</span></div>
+                   <div className="sum-row highlight"><span>Advance to Pay (Now)</span><span>{fmt(advanceAmt)}</span></div>
+                   <div className="sum-row"><span>Remaining Balance</span><span>{fmt(balanceAmt)}</span></div>
+                </div>
+                <div className="summary-actions">
+                   <button className="btn btn-primary full-btn" onClick={handlePayNow} disabled={paying}>
+                      {paying ? 'Processing...' : `Pay ${fmt(advanceAmt)} Now`}
+                   </button>
+                   <button className="btn btn-ghost" onClick={() => setStep('form')}>← Edit Details</button>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {step === 'paid' && (
+          <div className="success-scene animate-in">
+             <div className="glass-card success-card">
+                <div className="check-icon">✓</div>
+                <h2>Booking Confirmed!</h2>
+                <p>We've received your advance payment of <strong>{fmt(advanceAmt)}</strong>.</p>
+                <div className="ref-number">{booking.booking_ref}</div>
+                <p className="text-muted">A confirmation email has been sent to {form.customer_email}</p>
+             </div>
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        .public-canvas {
+          min-height: 100vh;
+          background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2000');
+          background-size: cover;
+          background-position: center;
+          color: #fff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 40px 20px;
+        }
+
+        .branding-top { text-align: center; margin-bottom: 40px; }
+        .branding-top h3 { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
+
+        .step-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+        .step-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: rgba(255,255,255,0.4); }
+        .step-dot.active { border-color: var(--primary); color: var(--primary); background: rgba(99, 102, 241, 0.1); }
+        .step-dot.done { border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .step-line { width: 40px; height: 2px; background: rgba(255,255,255,0.1); }
+
+        .public-content-wrap { width: 100%; max-width: 600px; }
+        .animate-in { animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .pkg-summary-card { padding: 32px; margin-bottom: 24px; text-align: center; }
+        .price-tag-big { font-size: 40px; font-weight: 900; color: var(--primary); margin-top: 12px; }
+
+        .main-booking-form { padding: 40px; }
+        .main-booking-form h3 { margin-bottom: 30px; font-size: 20px; font-weight: 800; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; }
+
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .input-row.split-3 { grid-template-columns: 1fr 1fr 1fr; }
+        
+        .field { display: flex; flex-direction: column; gap: 8px; }
+        .field label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+        .full-btn { padding: 16px; font-size: 16px; margin-top: 20px; }
+
+        .summary-card { padding: 40px; text-align: center; }
+        .summary-list { margin: 32px 0; display: flex; flex-direction: column; gap: 16px; }
+        .sum-row { display: flex; justify-content: space-between; font-size: 15px; }
+        .sum-row.highlight { color: #10b981; font-weight: 800; font-size: 18px; padding: 12px 0; border-top: 1px solid var(--border-glass); border-bottom: 1px solid var(--border-glass); }
+
+        .success-card { padding: 60px 40px; text-align: center; }
+        .check-icon { width: 80px; height: 80px; background: #10b981; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .ref-number { background: rgba(255,255,255,0.05); padding: 12px 24px; border-radius: 12px; font-family: var(--mono); font-weight: 800; font-size: 20px; margin: 24px 0; color: var(--primary); }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pop { from { scale: 0.5; opacity: 0; } to { scale: 1; opacity: 1; } }
+
+        @media (max-width: 600px) {
+          .input-row { grid-template-columns: 1fr; }
+        }
+      `}</style>
     </div>
   )
 }
