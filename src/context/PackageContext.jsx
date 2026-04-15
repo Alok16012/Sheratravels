@@ -127,6 +127,7 @@ export function PackageProvider({ children }) {
   const saveAll = useCallback(async (pkg, prices, days) => {
     if (!pkg?.id) return
     dispatch({ type: 'SET_SAVING', payload: true })
+    try {
       // Update package (exclude id from body)
       const { id: _, ...pkgUpdates } = pkg
       const { error: pkgErr } = await supabase.from('packages').update({ ...pkgUpdates, updated_at: new Date().toISOString() }).eq('id', pkg.id)
@@ -276,6 +277,7 @@ export function PackageProvider({ children }) {
       await supabase.from('day_photos').delete().eq('id', existing.id)
     }
     // Insert new
+    let newPhoto = { ...photo, slot_index: slotIdx, day_id: day.id, id: null }
     if (day.id) {
       const { data, error } = await supabase.from('day_photos').insert([{
         day_id: day.id, 
