@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react'
+// Triggering fresh Vercel build with clean code
 import { supabase, uploadPhoto, deletePhoto } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
