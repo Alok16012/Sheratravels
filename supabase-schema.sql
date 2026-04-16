@@ -19,9 +19,10 @@ create table if not exists packages (
   tc_cancel text,
   tc_notes text,
   company_name text default 'Shera Travels',
-  company_addr text default 'Budgam, Jammu & Kashmir, India',
+  company_addr text default 'Radio Colony, Srinagar, Lawaypora, Srinagar, Jammu and Kashmir 190017',
   company_email text default 'sheratravels21@gmail.com',
   company_phone text default '+91-9149406965, 9858966518',
+  company_gst text default '01KODPS7232P1ZE',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -189,6 +190,16 @@ alter table prices disable row level security;
 alter table days disable row level security;
 alter table day_photos disable row level security;
 alter table photo_library disable row level security;
+
+-- ═══════════════════════════════════════
+-- MIGRATION: Add company_gst if not already present
+-- Run this if you already have the packages table from an older schema
+-- ═══════════════════════════════════════
+alter table packages add column if not exists company_gst text default '01KODPS7232P1ZE';
+
+-- Update existing rows with the correct address and GST (run only if needed)
+-- update packages set company_gst = '01KODPS7232P1ZE' where company_gst is null;
+-- update packages set company_addr = 'Radio Colony, Srinagar, Lawaypora, Srinagar, Jammu and Kashmir 190017' where company_addr = 'Budgam, Jammu & Kashmir, India';
 
 -- ═══════════════════════════════════════
 -- STORAGE BUCKET

@@ -19,9 +19,10 @@ const DEFAULT_PACKAGE = {
   tc_cancel: 'Upon cancellation, refund will be made after deducting the Retention Amount.\nRetention Amount varies as per days left before package start date.\nRefund within 15 working days.',
   tc_notes: '',
   company_name: 'Shera Travels',
-  company_addr: 'Budgam, Jammu & Kashmir, India',
+  company_addr: 'Radio Colony, Srinagar, Lawaypora, Srinagar, Jammu and Kashmir 190017',
   company_email: 'sheratravels21@gmail.com',
   company_phone: '+91-9149406965, 9858966518',
+  company_gst: '01KODPS7232P1ZE',
 }
 
 const initialState = {
@@ -86,6 +87,7 @@ export function PackageProvider({ children }) {
       company_addr: company.addr || DEFAULT_PACKAGE.company_addr,
       company_email: company.email || DEFAULT_PACKAGE.company_email,
       company_phone: company.phone || DEFAULT_PACKAGE.company_phone,
+      company_gst: company.gst || DEFAULT_PACKAGE.company_gst,
     }
 
     const pkgToInsert = { ...newPkg }

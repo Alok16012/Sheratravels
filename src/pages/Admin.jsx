@@ -7,9 +7,10 @@ import { saveCredentials, clearCredentials, getStoredCredentials, isConfigured }
 
 const DEFAULT_COMPANY = {
   name: 'Shera Travels',
-  addr: 'Budgam, Jammu & Kashmir, India',
+  addr: 'Radio Colony, Srinagar, Lawaypora, Srinagar, Jammu and Kashmir 190017',
   email: 'sheratravels21@gmail.com',
   phone: '+91-9149406965, 9858966518',
+  gst: '01KODPS7232P1ZE',
 }
 
 const DEFAULT_PRICE_TEMPLATES = [
@@ -160,6 +161,10 @@ export default function Admin() {
             <div className="form-field full">
               <label>Address</label>
               <input className="glass-input" value={company.addr} onChange={e => setCompany({...company, addr: e.target.value})} />
+            </div>
+            <div className="form-field full">
+              <label>GST Number</label>
+              <input className="glass-input" value={company.gst || ''} onChange={e => setCompany({...company, gst: e.target.value})} placeholder="01KODPS7232P1ZE" />
             </div>
             <div className="form-actions full">
               <button className="btn btn-primary" onClick={saveCompany}>Save Company Info</button>

@@ -6,6 +6,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
     addr: pkg?.company_addr || '',
     email: pkg?.company_email || '',
     phone: pkg?.company_phone || '',
+    gst: pkg?.company_gst || '',
   }
 
   // Unique hotels
@@ -39,6 +40,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
             <div className="pv-company">
               <h1>{co.name}</h1>
               <p>{co.addr}</p>
+              {co.gst && <p style={{ fontSize: 10, fontWeight: 700, marginTop: 2 }}>GSTIN: {co.gst}</p>}
             </div>
           </div>
           <div className="pv-contact">
@@ -231,6 +233,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
         <div className="pv-footer">
           <h3>{co.name}</h3>
           <p>{co.addr} &nbsp;|&nbsp; {co.email} &nbsp;|&nbsp; {co.phone}</p>
+          {co.gst && <p style={{ marginTop: 4, fontWeight: 700 }}>GSTIN: {co.gst}</p>}
           <p style={{ marginTop: 6, fontSize: 11, opacity: 0.7 }}>
             Shera Travels — Discover Kashmir With Us
           </p>
