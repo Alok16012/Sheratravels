@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCRM, LEAD_STAGES } from '../../context/CRMContext'
+import { isConfigured } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const avatarColor = (name = '') => {
@@ -77,8 +78,12 @@ export default function Leads() {
   const [filter, setFilter] = useState('all')
   const [showAdd, setShowAdd] = useState(false)
   const [editingLead, setEditingLead] = useState(null)
+  const [dbStatus, setDbStatus] = useState('checking')
 
-  useEffect(() => { fetchLeads() }, [fetchLeads])
+  useEffect(() => { 
+    fetchLeads()
+    setDbStatus(isConfigured ? 'supabase' : 'local')
+  }, [fetchLeads])
 
   const filteredLeads = leads.filter(l => {
     const q = search.toLowerCase()
@@ -124,6 +129,20 @@ export default function Leads() {
 
   return (
     <div className="leads-dashboard">
+      {dbStatus === 'local' && (
+        <div style={{ 
+          background: '#fef3c7', 
+          color: '#92400e', 
+          padding: '10px 16px', 
+          borderRadius: '8px', 
+          marginBottom: '16px',
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          ⚠️ Using Local Storage (Supabase not connected) - Go to Settings to connect database
+        </div>
+      )}
+      
       <div className="leads-header">
         <div>
           <h1 className="text-gradient">Traveler Pipeline</h1>

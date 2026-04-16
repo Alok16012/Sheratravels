@@ -1,6 +1,6 @@
 // @refresh reset
-import React, { createContext, useContext, useReducer, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react'
+import { supabase, isConfigured } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const CRMContext = createContext(null)
@@ -55,6 +55,12 @@ function saveMockLeads(leads) {
 export function CRMProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
+  // Debug: Log Supabase status on mount
+  useEffect(() => {
+    console.log('🔍 Supabase configured:', isConfigured)
+    console.log('🔍 Supabase URL:', localStorage.getItem('sb_url') || 'Not set')
+  }, [])
+
   // ── FETCH ALL LEADS ───────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
@@ -62,13 +68,15 @@ export function CRMProvider({ children }) {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) {
-        console.warn('Fetch leads error (using localStorage):', error.message)
+        console.warn('❌ Supabase error:', error.code, error.message)
+        console.log('📦 Using localStorage fallback')
         dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
       } else {
+        console.log('✅ Leads from Supabase:', data?.length || 0)
         dispatch({ type: 'SET_LEADS', payload: data || [] })
       }
     } catch (err) {
-      console.warn('Using localStorage fallback:', err.message)
+      console.error('❌ Exception:', err.message)
       dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
@@ -77,7 +85,6 @@ export function CRMProvider({ children }) {
   // ── CREATE LEAD ───────────────────────────────────────────────────
   const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
-    // Ensure stage is valid
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
     const row = { 
       ...formData, 
@@ -87,14 +94,17 @@ export function CRMProvider({ children }) {
     }
     try {
       const { data, error } = await supabase.from('leads').insert([row]).select().single()
-      if (error) throw error
+      if (error) {
+        console.error('❌ Insert error:', error.code, error.message)
+        throw error
+      }
+      console.log('✅ Lead saved to Supabase:', data)
       dispatch({ type: 'ADD_LEAD', payload: data })
-      toast.success('Lead add ho gaya!')
+      toast.success('Lead saved to database!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return data
     } catch (err) {
-      console.warn('Lead save failed, using localStorage:', err.message)
-      // localStorage fallback
+      console.warn('📝 Saving to localStorage instead')
       const lead = { 
         ...formData, 
         id: crypto.randomUUID(), 
@@ -105,7 +115,7 @@ export function CRMProvider({ children }) {
       const all = [lead, ...getMockLeads()]
       saveMockLeads(all)
       dispatch({ type: 'ADD_LEAD', payload: lead })
-      toast.success('Lead saved!')
+      toast.success('Lead saved locally!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return lead
     }
