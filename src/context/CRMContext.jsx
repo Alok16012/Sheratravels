@@ -74,7 +74,7 @@ export function CRMProvider({ children }) {
   }, [])
 
   // ── CREATE LEAD ───────────────────────────────────────────────────
-  const createLead = useCallback(async (formData) => {
+  const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
     try {
       const row = { ...formData, stage: 'new_inquiry', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
@@ -100,12 +100,14 @@ export function CRMProvider({ children }) {
   const updateLead = useCallback(async (id, changes) => {
     const updated = { ...changes, updated_at: new Date().toISOString() }
     try {
-      await supabase.from('leads').update(updated).eq('id', id)
+      const { error } = await supabase.from('leads').update(updated).eq('id', id)
+      if (error) throw error
     } catch {
       const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
       saveMockLeads(all)
     }
     dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated } })
+    toast.success('Lead saved!')
   }, [state.leads])
 
   // ── CHANGE STAGE ──────────────────────────────────────────────────
@@ -204,7 +206,7 @@ export function CRMProvider({ children }) {
   return (
     <CRMContext.Provider value={{
       ...state,
-      fetchLeads, createLead, updateLead, changeStage, deleteLead,
+      fetchLeads, addLead, updateLead, changeStage, deleteLead,
       fetchNotes, addNote,
       getStats,
     }}>
