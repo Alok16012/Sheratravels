@@ -141,6 +141,17 @@ export function CRMProvider({ children }) {
     toast.success(`Stage: ${newStageLabel}`)
   }, [state.leads])
 
+  // ── DELETE LEAD ──────────────────────────────────────────────────
+  const deleteLead = useCallback(async (id) => {
+    try {
+      await supabase.from('leads').delete().eq('id', id)
+    } catch {
+      saveMockLeads(getMockLeads().filter(l => l.id !== id))
+    }
+    dispatch({ type: 'REMOVE_LEAD', payload: id })
+    toast.success('Lead deleted')
+  }, [])
+
   // ── STATS (computed) ──────────────────────────────────────────────
   const getStats = useCallback(() => {
     const leads = state.leads
