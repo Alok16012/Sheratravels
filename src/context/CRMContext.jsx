@@ -57,8 +57,10 @@ export function CRMProvider({ children }) {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) {
+        console.warn('Supabase fetch error, using local:', error.message)
         dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
       } else {
+        console.log('Fetched leads from Supabase:', data?.length)
         dispatch({ type: 'SET_LEADS', payload: data || [] })
       }
     } catch {
@@ -79,17 +81,24 @@ export function CRMProvider({ children }) {
     }
     try {
       const { data, error } = await supabase.from('leads').insert([lead]).select().single()
-      if (error) throw error
-      dispatch({ type: 'ADD_LEAD', payload: data })
+      if (error) {
+        console.error('Supabase insert error:', error.message)
+        throw error
+      }
+      console.log('Lead saved to Supabase:', data)
+      dispatch({ type: 'ADD_LEAD', payload: data || lead })
       toast.success('Lead saved!')
-    } catch {
+      dispatch({ type: 'SET_SAVING', payload: false })
+      return data || lead
+    } catch (err) {
+      console.log('Saving to localStorage instead')
       const all = [lead, ...getMockLeads()]
       saveMockLeads(all)
       dispatch({ type: 'ADD_LEAD', payload: lead })
       toast.success('Lead saved!')
+      dispatch({ type: 'SET_SAVING', payload: false })
+      return lead
     }
-    dispatch({ type: 'SET_SAVING', payload: false })
-    return lead
   }, [])
 
   const updateLead = useCallback(async (id, changes) => {
