@@ -1596,3 +1596,295 @@ body {
   padding: 6px 12px;
   font-size: 12px;
 }
+
+/* ── Mobile Responsive ── */
+.mobile-menu-btn {
+  display: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-size: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-right: 12px;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+}
+
+@media (max-width: 1024px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .sidebar-nav {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1001;
+  }
+
+  .sidebar-nav.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.active {
+    display: block;
+  }
+
+  .main-viewport {
+    margin-left: 0;
+    padding: 20px 16px;
+  }
+
+  .main-header {
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-profile {
+    display: none !important;
+  }
+
+  .page-workspace {
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    height: auto;
+    min-height: 60px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .main-header h2 {
+    font-size: 18px;
+  }
+
+  .glass-card {
+    padding: 16px !important;
+    border-radius: 12px;
+  }
+
+  .modern-table {
+    font-size: 12px;
+  }
+
+  .modern-table th,
+  .modern-table td {
+    padding: 12px 8px;
+  }
+
+  .nav-footer {
+    padding-top: 16px;
+  }
+
+  .logout-btn {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-viewport {
+    padding: 16px 12px;
+  }
+
+  .page-workspace {
+    overflow-x: hidden;
+  }
+
+  .glass-card {
+    padding: 12px !important;
+    margin-left: -4px;
+    margin-right: -4px;
+    width: calc(100% + 8px);
+    border-radius: 10px;
+  }
+
+  .modern-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .text-gradient {
+    font-size: 16px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+  }
+
+  .empty-state-icon {
+    font-size: 36px;
+  }
+
+  .empty-state h2 {
+    font-size: 16px;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions-wrap {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    padding: 6px 10px;
+    font-size: 18px;
+  }
+
+  .glass-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .day-title-input {
+    width: 150px;
+  }
+
+  .photo-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .price-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .check-group {
+    gap: 6px;
+  }
+
+  .check-pill {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Editor Mobile */
+  .mobile-show {
+    display: block !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .editor-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .editor-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .editor-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 998;
+  }
+
+  .editor-sidebar-overlay.active {
+    display: block;
+  }
+
+  .editor-canvas {
+    margin-left: 0 !important;
+    padding: 16px !important;
+    padding-top: 80px !important;
+  }
+
+  .editor-top-bar {
+    position: fixed !important;
+    top: 12px !important;
+    left: 12px !important;
+    right: 12px !important;
+    height: auto !important;
+    min-height: 60px;
+    padding: 12px 16px !important;
+  }
+
+  .top-bar-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pkg-info h3 {
+    font-size: 14px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .top-bar-actions {
+    display: none;
+  }
+
+  .editor-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  .editor-sidebar-tabs {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    height: auto;
+    max-height: 60vh;
+    border-radius: 16px 16px 0 0;
+    z-index: 100;
+  }
+
+  .tabs-header {
+    padding-top: 8px;
+  }
+
+  .sidebar-tab {
+    padding: 10px 4px;
+    font-size: 10px;
+  }
+
+  .tabs-content {
+    padding: 16px;
+  }
+}

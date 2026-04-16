@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 export default function MainLayout({ children, headerActions }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
     localStorage.removeItem('shara_auth')
@@ -20,9 +22,15 @@ export default function MainLayout({ children, headerActions }) {
 
   return (
     <div className="layout-wrapper">
+      {/* Mobile Overlay */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} 
+        onClick={() => setSidebarOpen(false)} 
+      />
+
       {/* Sidebar */}
-      <aside className="sidebar-nav">
-        <NavLink to="/" className="brand">
+      <aside className={`sidebar-nav ${sidebarOpen ? 'open' : ''}`}>
+        <NavLink to="/" className="brand" onClick={() => setSidebarOpen(false)}>
           <div className="brand-logo">ST</div>
           <span className="brand-name">Shera Travels</span>
         </NavLink>
@@ -33,6 +41,7 @@ export default function MainLayout({ children, headerActions }) {
               key={item.path} 
               to={item.path} 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
@@ -52,6 +61,9 @@ export default function MainLayout({ children, headerActions }) {
       <main className="main-viewport">
         <header className="main-header">
           <div className="header-left">
+            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+              ☰
+            </button>
             <h2 className="text-gradient">
               {navItems.find(n => n.path === location.pathname)?.label || 'Dashboard'}
             </h2>

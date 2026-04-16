@@ -19,6 +19,7 @@ export default function Editor() {
 
   const [activeTab, setActiveTab] = useState('info')
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const saveRef = useRef(null)
 
   useEffect(() => {
@@ -71,8 +72,10 @@ export default function Editor() {
 
   return (
     <div className="editor-layout">
-      <aside className="editor-sidebar">
-        <NavLink to="/" className="brand">
+      <div className={`editor-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+      
+      <aside className={`editor-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <NavLink to="/" className="brand" onClick={() => setSidebarOpen(false)}>
           <div className="brand-logo">ST</div>
           <span className="brand-name">Shera Travels</span>
         </NavLink>
@@ -83,6 +86,7 @@ export default function Editor() {
               key={item.path}
               to={item.path}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
@@ -101,7 +105,8 @@ export default function Editor() {
       <div className="editor-canvas">
         <div className="editor-top-bar glass-card animate-fade">
           <div className="top-bar-left">
-            <button className="icon-btn back-btn" onClick={() => navigate('/')}>←</button>
+            <button className="icon-btn back-btn mobile-show" onClick={() => setSidebarOpen(true)}>☰</button>
+            <button className="icon-btn back-btn mobile-hide" onClick={() => navigate('/')}>←</button>
             <div className="pkg-info">
               <h3 className="text-gradient">{pkg.title || 'Untitled Package'}</h3>
               <div className={`save-status ${saveStatus}`}>

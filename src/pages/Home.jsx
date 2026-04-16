@@ -197,6 +197,39 @@ export default function Home() {
         .shortcut-item h4 { font-size: 15px; margin-bottom: 2px; }
         .shortcut-item p { font-size: 12px; color: var(--text-dim); }
         .shortcut-item span { color: var(--primary); font-weight: 800; }
+
+        @media (max-width: 768px) {
+          .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 24px;
+          }
+          .dashboard-header h1 { font-size: 24px; }
+          .dashboard-header .btn { width: 100%; justify-content: center; }
+          
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+          }
+          .stat-card { padding: 16px; }
+          .stat-value { font-size: 20px; }
+          .stat-icon-wrap { width: 40px; height: 40px; font-size: 18px; border-radius: 8px; }
+          .stat-label { font-size: 10px; }
+          
+          .dashboard-sections { gap: 20px; }
+          .section-head { flex-wrap: wrap; gap: 8px; }
+          .section-head h3 { font-size: 15px; }
+        }
+
+        @media (max-width: 480px) {
+          .stats-grid { grid-template-columns: 1fr; }
+          .stat-card { padding: 16px; flex-direction: row; }
+          .stat-value { font-size: 24px; }
+          .shortcut-item { padding: 14px; }
+          .shortcut-item h4 { font-size: 14px; }
+        }
       `}</style>
     </div>
   )

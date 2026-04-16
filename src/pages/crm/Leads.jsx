@@ -220,6 +220,19 @@ export default function Leads() {
           onClose={() => { setShowAdd(false); setEditingLead(null); }} 
         />
       )}
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .leads-dashboard .leads-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+          .leads-dashboard .stats-row { flex-wrap: wrap; }
+          .leads-dashboard .stat-chip { min-width: calc(50% - 8px); }
+          .leads-dashboard .table-controls { flex-direction: column; }
+          .leads-dashboard .table-controls > div { max-width: 100%; }
+        }
+        @media (max-width: 480px) {
+          .leads-dashboard .stat-chip { min-width: 100%; }
+        }
+      `}</style>
     </div>
   )
 }
