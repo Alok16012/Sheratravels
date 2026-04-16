@@ -64,9 +64,14 @@ export function CRMProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
-      if (error) throw error
+      if (error) {
+        console.error('Fetch leads error:', error)
+        throw error
+      }
+      console.log('Leads fetched:', data?.length)
       dispatch({ type: 'SET_LEADS', payload: data || [] })
-    } catch {
+    } catch (err) {
+      console.warn('Using localStorage fallback:', err)
       // fallback to localStorage mock
       dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
     }
@@ -77,20 +82,40 @@ export function CRMProvider({ children }) {
   const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
     try {
-      const row = { ...formData, stage: 'new_inquiry', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      // Ensure stage is valid
+      const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
+      const row = { 
+        ...formData, 
+        stage, 
+        created_at: new Date().toISOString(), 
+        updated_at: new Date().toISOString() 
+      }
+      console.log('Creating lead:', row)
       const { data, error } = await supabase.from('leads').insert([row]).select().single()
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+      console.log('Lead created:', data)
       dispatch({ type: 'ADD_LEAD', payload: data })
       toast.success('Lead add ho gaya!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return data
-    } catch {
+    } catch (err) {
+      console.error('Lead save failed:', err)
       // localStorage fallback
-      const lead = { ...formData, id: crypto.randomUUID(), stage: 'new_inquiry', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
+      const lead = { 
+        ...formData, 
+        id: crypto.randomUUID(), 
+        stage, 
+        created_at: new Date().toISOString(), 
+        updated_at: new Date().toISOString() 
+      }
       const all = [lead, ...getMockLeads()]
       saveMockLeads(all)
       dispatch({ type: 'ADD_LEAD', payload: lead })
-      toast.success('Lead add ho gaya!')
+      toast.success('Lead saved locally!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return lead
     }
@@ -138,7 +163,13 @@ export function CRMProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('lead_notes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
-      if (error) throw error
+      if (error) {
+        console.warn('lead_notes table error:', error)
+        // Try localStorage if table doesn't exist
+        const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
+        dispatch({ type: 'SET_NOTES', leadId, payload: all.filter(n => n.lead_id === leadId) })
+        return
+      }
       dispatch({ type: 'SET_NOTES', leadId, payload: data || [] })
     } catch {
       const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
@@ -151,7 +182,15 @@ export function CRMProvider({ children }) {
     const row = { lead_id: leadId, content, type, created_at: new Date().toISOString() }
     try {
       const { data, error } = await supabase.from('lead_notes').insert([row]).select().single()
-      if (error) throw error
+      if (error) {
+        console.warn('lead_notes insert error:', error)
+        // Save to localStorage if table doesn't exist
+        const note = { ...row, id: crypto.randomUUID() }
+        const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
+        localStorage.setItem('crm_notes', JSON.stringify([note, ...all]))
+        dispatch({ type: 'ADD_NOTE', leadId, payload: note })
+        return
+      }
       dispatch({ type: 'ADD_NOTE', leadId, payload: data })
     } catch {
       const note = { ...row, id: crypto.randomUUID() }

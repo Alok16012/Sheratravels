@@ -95,12 +95,21 @@ export default function Leads() {
   ]
 
   const handleSave = async (formData) => {
-    if (editingLead) {
-      await updateLead(editingLead.id, formData)
-      toast.success('Lead updated')
-    } else {
-      await addLead(formData)
-      toast.success('Lead added')
+    if (!formData.name?.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    
+    try {
+      if (editingLead) {
+        await updateLead(editingLead.id, formData)
+      } else {
+        await addLead(formData)
+      }
+      // Force refetch to ensure data is synced
+      await fetchLeads()
+    } catch (err) {
+      console.error('Save error:', err)
     }
     setEditingLead(null)
     setShowAdd(false)

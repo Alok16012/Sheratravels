@@ -75,7 +75,6 @@ function createMockClient() {
           _filters.every(f => String(r[f.col]) === String(f.val)) ? { ...r, ..._data } : r
         )
         persist(table)
-        // For select-after-update, return updated rows
         const updated = (store[table] || []).filter(r => _filters.every(f => String(r[f.col]) === String(f.val)))
         return _single ? { data: updated[0] || null, error: null } : { data: updated, error: null }
       }
@@ -96,9 +95,8 @@ function createMockClient() {
       order:  (col, opts) => { _order = { col, opts }; return builder },
       limit:  () => builder,
       single: () => { _single = true; return builder },
-      // Return a real Promise so .then().catch() chaining works
-      then: (onFulfilled, onRejected) => Promise.resolve(execute()).then(onFulfilled, onRejected),
-      catch: (onRejected) => Promise.resolve(execute()).catch(onRejected),
+      then: (resolve, reject) => Promise.resolve(execute()).then(resolve, reject),
+      catch: (reject) => Promise.resolve(execute()).catch(reject),
     }
     return builder
   }
