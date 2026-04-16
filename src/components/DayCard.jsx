@@ -99,6 +99,7 @@ export default function DayCard({ day, idx }) {
         <div className="field">
           <label>Day Description</label>
           <textarea
+            className="glass-input"
             value={day.description || ''}
             placeholder="Describe the day's activities..."
             onChange={e => updateDay(idx, 'description', e.target.value)}
@@ -109,6 +110,7 @@ export default function DayCard({ day, idx }) {
         <div className="field">
           <label>Distance / Duration (optional)</label>
           <input
+            className="glass-input"
             value={day.distance || ''}
             placeholder="e.g. 97 KMS / 03:30 HRS one way"
             onChange={e => updateDay(idx, 'distance', e.target.value)}
@@ -125,6 +127,7 @@ export default function DayCard({ day, idx }) {
               </span>
             ))}
             <input
+              className="glass-input"
               placeholder="Type & Enter..."
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ',') {
@@ -147,6 +150,7 @@ export default function DayCard({ day, idx }) {
               </span>
             ))}
             <input
+              className="glass-input"
               placeholder="e.g. Adventure, Sightseeing..."
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ',') {
@@ -180,6 +184,7 @@ export default function DayCard({ day, idx }) {
           <div className="field">
             <label>Accommodation (Hotel Name)</label>
             <input
+              className="glass-input"
               value={day.accommodation || ''}
               placeholder="e.g. Hotel Mid Town Green"
               onChange={e => updateDay(idx, 'accommodation', e.target.value)}

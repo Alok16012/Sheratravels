@@ -35,14 +35,14 @@ export default function PhotosTab({ active }) {
 
       <div className="field">
         <label>Photo Type</label>
-        <select value={tagType} onChange={e => setTagType(e.target.value)}>
+        <select className="glass-input" value={tagType} onChange={e => setTagType(e.target.value)}>
           <option value="hotel">🏨 Hotel</option>
           <option value="location">📍 Location / Scene</option>
         </select>
       </div>
       <div className="field">
         <label>Name (Hotel or Place)</label>
-        <input value={tagName} placeholder="e.g. Hotel Mid Town Green"
+        <input className="glass-input" value={tagName} placeholder="e.g. Hotel Mid Town Green"
           onChange={e => setTagName(e.target.value)} />
       </div>
 

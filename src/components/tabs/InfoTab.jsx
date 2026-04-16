@@ -6,6 +6,7 @@ function ListAddRow({ placeholder, onAdd }) {
   return (
     <div className="list-add-row">
       <input
+        className="glass-input"
         ref={inputRef}
         placeholder={placeholder}
         onKeyDown={e => {
@@ -39,6 +40,7 @@ export default function InfoTab({ active }) {
       <div className="field">
         <label>Package Title</label>
         <input
+          className="glass-input"
           value={pkg.title || ''}
           placeholder="e.g. 5 Nights 6 Days Kashmir Tour"
           onChange={e => updateField('title', e.target.value)}
@@ -47,6 +49,7 @@ export default function InfoTab({ active }) {
       <div className="field">
         <label>Sub-title / Tagline</label>
         <input
+          className="glass-input"
           value={pkg.sub_title || ''}
           placeholder="e.g. Shera Travels — Let's Travel The World"
           onChange={e => updateField('sub_title', e.target.value)}
@@ -55,18 +58,18 @@ export default function InfoTab({ active }) {
       <div className="grid-2">
         <div className="field">
           <label>Nights</label>
-          <input type="number" min="1" value={pkg.nights || 5}
+          <input className="glass-input" type="number" min="1" value={pkg.nights || 5}
             onChange={e => updateField('nights', parseInt(e.target.value) || 1)} />
         </div>
         <div className="field">
           <label>Days</label>
-          <input type="number" min="1" value={pkg.days || 6}
+          <input className="glass-input" type="number" min="1" value={pkg.days || 6}
             onChange={e => updateField('days', parseInt(e.target.value) || 1)} />
         </div>
       </div>
       <div className="field">
         <label>Starting From</label>
-        <input value={pkg.start_location || ''} placeholder="e.g. Srinagar, J&K"
+        <input className="glass-input" value={pkg.start_location || ''} placeholder="e.g. Srinagar, J&K"
           onChange={e => updateField('start_location', e.target.value)} />
       </div>
 

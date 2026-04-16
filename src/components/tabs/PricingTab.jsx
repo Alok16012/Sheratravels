@@ -75,6 +75,7 @@ export default function PricingTab({ active }) {
               <div className="price-row-field">
                 <label>Pax Type</label>
                 <input
+                  className="glass-input"
                   value={row.pax_type || ''}
                   placeholder="e.g. Adult"
                   onChange={e => updatePrice(i, 'pax_type', e.target.value)}
@@ -83,6 +84,7 @@ export default function PricingTab({ active }) {
               <div className="price-row-field">
                 <label>Age Limit</label>
                 <input
+                  className="glass-input"
                   value={row.age_limit || ''}
                   placeholder="e.g. Above 12 yrs"
                   onChange={e => updatePrice(i, 'age_limit', e.target.value)}
@@ -93,6 +95,7 @@ export default function PricingTab({ active }) {
                 <div className="price-inr-input">
                   <span className="price-inr-symbol">₹</span>
                   <input
+                    className="glass-input"
                     type="number"
                     value={row.price || ''}
                     placeholder="17500"
