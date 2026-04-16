@@ -1,12 +1,15 @@
 export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days }) {
   if (!open) return null
 
+  // Fallback: read GST & company defaults from localStorage if not on the package
+  const savedCompany = JSON.parse(localStorage.getItem('company_defaults') || '{}')
+
   const co = {
-    name: pkg?.company_name || 'Shera Travels',
-    addr: pkg?.company_addr || '',
-    email: pkg?.company_email || '',
-    phone: pkg?.company_phone || '',
-    gst: pkg?.company_gst || '',
+    name: pkg?.company_name || savedCompany.name || 'Shera Travels',
+    addr: pkg?.company_addr || savedCompany.addr || '',
+    email: pkg?.company_email || savedCompany.email || '',
+    phone: pkg?.company_phone || savedCompany.phone || '',
+    gst: pkg?.company_gst || savedCompany.gst || '01KODPS7232P1ZE',
   }
 
   // Unique hotels

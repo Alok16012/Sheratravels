@@ -91,11 +91,21 @@ export function PackageProvider({ children }) {
     }
 
     const pkgToInsert = { ...newPkg }
-    delete pkgToInsert.id // Let DB generate UUID
+    delete pkgToInsert.id           // Let DB generate UUID
+    delete pkgToInsert.company_gst  // Exclude until DB column is confirmed
 
     dispatch({ type: 'SET_SAVING', payload: true })
     const { data, error } = await supabase.from('packages').insert([pkgToInsert]).select().single()
-    if (error) { toast.error('Failed to create package'); dispatch({ type: 'SET_SAVING', payload: false }); return null }
+    if (error) {
+      console.error('Package create error:', error)
+      toast.error('Failed to create package: ' + (error.message || 'Check Supabase connection'))
+      dispatch({ type: 'SET_SAVING', payload: false })
+      return null
+    }
+
+    // Store GST in the package state even if not in DB yet
+    const fullPkg = { ...data, company_gst: newPkg.company_gst }
+    dispatch({ type: 'SET_CURRENT_PACKAGE', payload: fullPkg })
 
     // Use saved price templates if available
     const savedTemplates = localStorage.getItem('price_templates')
