@@ -1797,7 +1797,34 @@ body {
     font-size: 12px;
   }
 
-  /* Editor Mobile */
+  .editor-sidebar-tabs {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    height: auto;
+    max-height: 60vh;
+    border-radius: 16px 16px 0 0;
+    z-index: 100;
+  }
+
+  .tabs-header {
+    padding-top: 8px;
+  }
+
+  .sidebar-tab {
+    padding: 10px 4px;
+    font-size: 10px;
+  }
+
+  .tabs-content {
+    padding: 16px;
+  }
+}
+
+/* Editor Mobile Shared */
+@media (max-width: 768px) {
   .mobile-show {
     display: block !important;
   }
@@ -1861,30 +1888,5 @@ body {
 
   .editor-workspace {
     grid-template-columns: 1fr !important;
-  }
-
-  .editor-sidebar-tabs {
-    position: fixed !important;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    height: auto;
-    max-height: 60vh;
-    border-radius: 16px 16px 0 0;
-    z-index: 100;
-  }
-
-  .tabs-header {
-    padding-top: 8px;
-  }
-
-  .sidebar-tab {
-    padding: 10px 4px;
-    font-size: 10px;
-  }
-
-  .tabs-content {
-    padding: 16px;
   }
 }

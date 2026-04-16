@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
-import Topbar from '../components/Topbar'
 import { saveCredentials, clearCredentials, getStoredCredentials, isConfigured } from '../lib/supabase'
 
 const DEFAULT_COMPANY = {
@@ -20,18 +18,12 @@ const DEFAULT_PRICE_TEMPLATES = [
 ]
 
 export default function Admin() {
-  const navigate = useNavigate()
-
-  // Supabase section
   const [sbUrl, setSbUrl] = useState('')
   const [sbKey, setSbKey] = useState('')
   const [testing, setTesting] = useState(false)
   const [connected, setConnected] = useState(isConfigured)
 
-  // Company section
   const [company, setCompany] = useState(DEFAULT_COMPANY)
-
-  // Price templates section
   const [templates, setTemplates] = useState(DEFAULT_PRICE_TEMPLATES)
 
   useEffect(() => {
@@ -89,22 +81,21 @@ export default function Admin() {
       <div className="dashboard-header">
         <div>
           <h1 className="text-gradient">Settings & Admin</h1>
-          <p className="text-muted">Configure your workspace defaults and database connection.</p>
+          <p className="text-muted">Configure your workspace.</p>
         </div>
       </div>
 
       <div className="admin-sections-grid">
-        {/* Supabase Connection */}
         <section className="glass-card settings-card">
           <div className="settings-head">
-             <div className="settings-icon">🗄️</div>
-             <div>
-               <h3>Supabase Database</h3>
-               <p className="text-dim">Connect your cloud database for real-time sync.</p>
-             </div>
-             <div className={`status-pill ${connected ? 'saved' : 'unsaved'}`}>
-               {connected ? 'Connected' : 'Disconnected'}
-             </div>
+            <div className="settings-icon">🗄️</div>
+            <div>
+              <h3>Supabase Database</h3>
+              <p className="text-dim">Connect your cloud database.</p>
+            </div>
+            <div className={`status-pill ${connected ? 'saved' : 'unsaved'}`}>
+              {connected ? 'Connected' : 'Disconnected'}
+            </div>
           </div>
 
           <div className="settings-form">
@@ -139,14 +130,13 @@ export default function Admin() {
           </div>
         </section>
 
-        {/* Company Info */}
         <section className="glass-card settings-card">
           <div className="settings-head">
-             <div className="settings-icon">🏢</div>
-             <div>
-               <h3>Company Profile</h3>
-               <p className="text-dim">Your brand details for itineraries.</p>
-             </div>
+            <div className="settings-icon">🏢</div>
+            <div>
+              <h3>Company Profile</h3>
+              <p className="text-dim">Your brand details.</p>
+            </div>
           </div>
 
           <div className="settings-form split">
@@ -167,19 +157,18 @@ export default function Admin() {
               <input className="glass-input" value={company.gst || ''} onChange={e => setCompany({...company, gst: e.target.value})} placeholder="01KODPS7232P1ZE" />
             </div>
             <div className="form-actions full">
-              <button className="btn btn-primary" onClick={saveCompany}>Save Company Info</button>
+              <button className="btn btn-primary" onClick={saveCompany}>Save</button>
             </div>
           </div>
         </section>
 
-        {/* Price Templates */}
         <section className="glass-card settings-card full-width">
-           <div className="settings-head">
-             <div className="settings-icon">💰</div>
-             <div>
-               <h3>Default Price Templates</h3>
-               <p className="text-dim">Pre-fill package pricing for faster creation.</p>
-             </div>
+          <div className="settings-head">
+            <div className="settings-icon">💰</div>
+            <div>
+              <h3>Default Price Templates</h3>
+              <p className="text-dim">Pre-fill package pricing.</p>
+            </div>
           </div>
           
           <div className="settings-table-wrap">
@@ -210,8 +199,8 @@ export default function Admin() {
               </tbody>
             </table>
             <div className="form-actions-row">
-              <button className="btn btn-ghost" onClick={() => setTemplates([...templates, {pax_type:'', age_limit:'', price:0}])}>+ Add Row</button>
-              <button className="btn btn-primary" onClick={saveTemplates}>Save Pricing Templates</button>
+              <button className="btn btn-ghost" onClick={() => setTemplates([...templates, {pax_type:'', age_limit:'', price:0}])}>+ Add</button>
+              <button className="btn btn-primary" onClick={saveTemplates}>Save</button>
             </div>
           </div>
         </section>
@@ -221,55 +210,60 @@ export default function Admin() {
         .admin-sections-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 32px;
+          gap: 24px;
         }
 
-        .full-width {
-          grid-column: 1 / -1;
-        }
+        .full-width { grid-column: 1 / -1; }
 
-        @media (max-width: 1024px) {
-          .admin-sections-grid { grid-template-columns: 1fr; }
-        }
-
-        .settings-card { padding: 32px; }
+        .settings-card { padding: 28px; }
 
         .settings-head {
           display: flex;
           align-items: center;
-          gap: 20px;
-          margin-bottom: 32px;
+          gap: 16px;
+          margin-bottom: 24px;
         }
 
         .settings-icon {
-          width: 52px;
-          height: 52px;
+          width: 48px;
+          height: 48px;
           background: rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
           justify-content: center;
           border-radius: 12px;
-          font-size: 24px;
+          font-size: 22px;
+          flex-shrink: 0;
         }
+
+        .settings-head h3 { font-size: 16px; margin-bottom: 2px; }
+        .settings-head .text-dim { font-size: 12px; }
 
         .settings-form {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
         }
 
         .settings-form.split {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 16px;
         }
 
         .form-field { display: flex; flex-direction: column; gap: 8px; }
-        .form-field label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+        .form-field label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
         .full { grid-column: 1 / -1; }
 
-        .form-actions { margin-top: 12px; }
-        .form-actions-row { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-glass); }
+        .form-actions { margin-top: 8px; display: flex; gap: 12px; }
+        .form-actions-row { 
+          display: flex; 
+          justify-content: space-between; 
+          margin-top: 20px; 
+          padding-top: 20px; 
+          border-top: 1px solid var(--border-glass);
+          gap: 12px;
+        }
 
         .table-inline-input {
           background: none;
@@ -283,15 +277,38 @@ export default function Admin() {
         }
 
         .status-pill {
-           margin-left: auto;
-           padding: 4px 12px;
-           border-radius: 20px;
-           font-size: 11px;
-           font-weight: 700;
-           background: rgba(255, 255, 255, 0.05);
+          margin-left: auto;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 700;
+          background: rgba(255, 255, 255, 0.05);
         }
         .status-pill.saved { color: #10b981; }
         .status-pill.unsaved { color: #f59e0b; }
+
+        @media (max-width: 1024px) {
+          .admin-sections-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-header h1 { font-size: 22px; }
+          .settings-card { padding: 20px; }
+          .settings-head { flex-wrap: wrap; }
+          .settings-icon { width: 42px; height: 42px; font-size: 20px; }
+          .settings-form.split { grid-template-columns: 1fr; }
+          .status-pill { margin-left: 0; width: 100%; text-align: center; padding: 6px; }
+          .form-actions { flex-direction: column; }
+          .form-actions .btn { width: 100%; justify-content: center; }
+          .form-actions-row { flex-direction: column; }
+          .form-actions-row .btn { width: 100%; justify-content: center; }
+        }
+
+        @media (max-width: 480px) {
+          .settings-card { padding: 16px; }
+          .settings-icon { width: 38px; height: 38px; font-size: 18px; }
+          .settings-head h3 { font-size: 14px; }
+        }
       `}</style>
     </div>
   )
