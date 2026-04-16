@@ -110,9 +110,13 @@ export function BookingProvider({ children }) {
       const { data, error } = await supabase.from('bookings').insert([row]).select().single()
       if (error) throw error
       dispatch({ type: 'ADD_BOOKING', payload: data })
-      // Update lead stage to 'advance_paid' or keep at 'negotiation'
+      // Update lead stage to 'advance_paid' (silently handle if fails)
       if (formData.lead_id) {
-        await supabase.from('leads').update({ stage: 'advance_paid', updated_at: new Date().toISOString() }).eq('id', formData.lead_id)
+        try {
+          await supabase.from('leads').update({ stage: 'advance_paid', updated_at: new Date().toISOString() }).eq('id', formData.lead_id)
+        } catch (e) {
+          console.warn('Could not update lead stage:', e)
+        }
       }
       toast.success(`Booking ${data.booking_ref} created!`)
       dispatch({ type: 'SET_SAVING', payload: false })

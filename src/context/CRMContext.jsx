@@ -62,14 +62,13 @@ export function CRMProvider({ children }) {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) {
-        console.error('Fetch leads error:', error)
-        throw error
+        console.warn('Fetch leads error (using localStorage):', error.message)
+        dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
+      } else {
+        dispatch({ type: 'SET_LEADS', payload: data || [] })
       }
-      console.log('Leads fetched:', data?.length)
-      dispatch({ type: 'SET_LEADS', payload: data || [] })
     } catch (err) {
-      console.warn('Using localStorage fallback:', err)
-      // fallback to localStorage mock
+      console.warn('Using localStorage fallback:', err.message)
       dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
@@ -78,30 +77,24 @@ export function CRMProvider({ children }) {
   // ── CREATE LEAD ───────────────────────────────────────────────────
   const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
+    // Ensure stage is valid
+    const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
+    const row = { 
+      ...formData, 
+      stage, 
+      created_at: new Date().toISOString(), 
+      updated_at: new Date().toISOString() 
+    }
     try {
-      // Ensure stage is valid
-      const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
-      const row = { 
-        ...formData, 
-        stage, 
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString() 
-      }
-      console.log('Creating lead:', row)
       const { data, error } = await supabase.from('leads').insert([row]).select().single()
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
-      console.log('Lead created:', data)
+      if (error) throw error
       dispatch({ type: 'ADD_LEAD', payload: data })
       toast.success('Lead add ho gaya!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return data
     } catch (err) {
-      console.error('Lead save failed:', err)
+      console.warn('Lead save failed, using localStorage:', err.message)
       // localStorage fallback
-      const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
       const lead = { 
         ...formData, 
         id: crypto.randomUUID(), 
@@ -112,7 +105,7 @@ export function CRMProvider({ children }) {
       const all = [lead, ...getMockLeads()]
       saveMockLeads(all)
       dispatch({ type: 'ADD_LEAD', payload: lead })
-      toast.success('Lead saved locally!')
+      toast.success('Lead saved!')
       dispatch({ type: 'SET_SAVING', payload: false })
       return lead
     }
@@ -124,7 +117,8 @@ export function CRMProvider({ children }) {
     try {
       const { error } = await supabase.from('leads').update(updated).eq('id', id)
       if (error) throw error
-    } catch {
+    } catch (err) {
+      console.warn('Update lead failed, using localStorage:', err.message)
       const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
       saveMockLeads(all)
     }
@@ -138,14 +132,15 @@ export function CRMProvider({ children }) {
     if (!lead || lead.stage === newStage) return
     const newStageLabel = LEAD_STAGES.find(s => s.id === newStage)?.label || newStage
     await updateLead(leadId, { stage: newStage })
-    toast.success(`Stage: ${newStageLabel}`)
   }, [state.leads])
 
   // ── DELETE LEAD ──────────────────────────────────────────────────
   const deleteLead = useCallback(async (id) => {
     try {
-      await supabase.from('leads').delete().eq('id', id)
-    } catch {
+      const { error } = await supabase.from('leads').delete().eq('id', id)
+      if (error) throw error
+    } catch (err) {
+      console.warn('Delete lead failed:', err.message)
       saveMockLeads(getMockLeads().filter(l => l.id !== id))
     }
     dispatch({ type: 'REMOVE_LEAD', payload: id })
