@@ -27,7 +27,6 @@ export const LEAD_SOURCES = [
 // ── REDUCER ────────────────────────────────────────────────────────────────
 const initialState = {
   leads:      [],
-  notes:      {},   // { leadId: [note, ...] }
   loading:    false,
   saving:     false,
 }
@@ -38,8 +37,6 @@ function reducer(state, action) {
     case 'ADD_LEAD':    return { ...state, leads: [action.payload, ...state.leads] }
     case 'UPDATE_LEAD': return { ...state, leads: state.leads.map(l => l.id === action.payload.id ? action.payload : l) }
     case 'REMOVE_LEAD': return { ...state, leads: state.leads.filter(l => l.id !== action.payload) }
-    case 'SET_NOTES':   return { ...state, notes: { ...state.notes, [action.leadId]: action.payload } }
-    case 'ADD_NOTE':    return { ...state, notes: { ...state.notes, [action.leadId]: [action.payload, ...(state.notes[action.leadId] || [])] } }
     case 'SET_LOADING': return { ...state, loading: action.payload }
     case 'SET_SAVING':  return { ...state, saving: action.payload }
     default: return state
@@ -139,66 +136,10 @@ export function CRMProvider({ children }) {
   const changeStage = useCallback(async (leadId, newStage) => {
     const lead = state.leads.find(l => l.id === leadId)
     if (!lead || lead.stage === newStage) return
-    const oldStageLabel = LEAD_STAGES.find(s => s.id === lead.stage)?.label || lead.stage
     const newStageLabel = LEAD_STAGES.find(s => s.id === newStage)?.label || newStage
     await updateLead(leadId, { stage: newStage })
-    // Auto-add timeline note
-    await addNote(leadId, `Stage changed: ${oldStageLabel} → ${newStageLabel}`, 'stage_change')
     toast.success(`Stage: ${newStageLabel}`)
-  }, [state.leads]) // eslint-disable-line
-
-  // ── DELETE LEAD ───────────────────────────────────────────────────
-  const deleteLead = useCallback(async (id) => {
-    try {
-      await supabase.from('leads').delete().eq('id', id)
-    } catch {
-      saveMockLeads(getMockLeads().filter(l => l.id !== id))
-    }
-    dispatch({ type: 'REMOVE_LEAD', payload: id })
-    toast.success('Lead deleted')
-  }, [])
-
-  // ── FETCH NOTES ───────────────────────────────────────────────────
-  const fetchNotes = useCallback(async (leadId) => {
-    try {
-      const { data, error } = await supabase
-        .from('lead_notes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
-      if (error) {
-        console.warn('lead_notes table error:', error)
-        // Try localStorage if table doesn't exist
-        const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
-        dispatch({ type: 'SET_NOTES', leadId, payload: all.filter(n => n.lead_id === leadId) })
-        return
-      }
-      dispatch({ type: 'SET_NOTES', leadId, payload: data || [] })
-    } catch {
-      const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
-      dispatch({ type: 'SET_NOTES', leadId, payload: all.filter(n => n.lead_id === leadId) })
-    }
-  }, [])
-
-  // ── ADD NOTE ──────────────────────────────────────────────────────
-  const addNote = useCallback(async (leadId, content, type = 'note') => {
-    const row = { lead_id: leadId, content, type, created_at: new Date().toISOString() }
-    try {
-      const { data, error } = await supabase.from('lead_notes').insert([row]).select().single()
-      if (error) {
-        console.warn('lead_notes insert error:', error)
-        // Save to localStorage if table doesn't exist
-        const note = { ...row, id: crypto.randomUUID() }
-        const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
-        localStorage.setItem('crm_notes', JSON.stringify([note, ...all]))
-        dispatch({ type: 'ADD_NOTE', leadId, payload: note })
-        return
-      }
-      dispatch({ type: 'ADD_NOTE', leadId, payload: data })
-    } catch {
-      const note = { ...row, id: crypto.randomUUID() }
-      const all = JSON.parse(localStorage.getItem('crm_notes') || '[]')
-      localStorage.setItem('crm_notes', JSON.stringify([note, ...all]))
-      dispatch({ type: 'ADD_NOTE', leadId, payload: note })
-    }
-  }, [])
+  }, [state.leads])
 
   // ── STATS (computed) ──────────────────────────────────────────────
   const getStats = useCallback(() => {
@@ -246,7 +187,6 @@ export function CRMProvider({ children }) {
     <CRMContext.Provider value={{
       ...state,
       fetchLeads, addLead, updateLead, changeStage, deleteLead,
-      fetchNotes, addNote,
       getStats,
     }}>
       {children}
