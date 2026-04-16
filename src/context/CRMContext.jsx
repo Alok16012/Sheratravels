@@ -124,41 +124,6 @@ export function CRMProvider({ children }) {
     toast.success('Lead deleted')
   }, [])
 
-  // ── UPDATE LEAD ───────────────────────────────────────────────────
-  const updateLead = useCallback(async (id, changes) => {
-    const updated = { ...changes, updated_at: new Date().toISOString() }
-    try {
-      const { error } = await supabase.from('leads').update(updated).eq('id', id)
-      if (error) throw error
-    } catch {
-      const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
-      saveMockLeads(all)
-    }
-    dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated } })
-    toast.success('Lead saved!')
-  }, [state.leads])
-
-  // ── CHANGE STAGE ──────────────────────────────────────────────────
-  const changeStage = useCallback(async (leadId, newStage) => {
-    const lead = state.leads.find(l => l.id === leadId)
-    if (!lead || lead.stage === newStage) return
-    const newStageLabel = LEAD_STAGES.find(s => s.id === newStage)?.label || newStage
-    await updateLead(leadId, { stage: newStage })
-  }, [state.leads])
-
-  // ── DELETE LEAD ──────────────────────────────────────────────────
-  const deleteLead = useCallback(async (id) => {
-    try {
-      const { error } = await supabase.from('leads').delete().eq('id', id)
-      if (error) throw error
-    } catch {
-      saveMockLeads(getMockLeads().filter(l => l.id !== id))
-    }
-    dispatch({ type: 'REMOVE_LEAD', payload: id })
-    toast.success('Lead deleted')
-  }, [])
-
-  // ── STATS (computed) ──────────────────────────────────────────────
   const getStats = useCallback(() => {
     const leads = state.leads
     const now = new Date()
@@ -169,18 +134,10 @@ export function CRMProvider({ children }) {
     const active = leads.filter(l => !['completed', 'lost'].includes(l.stage))
     const hot    = leads.filter(l => l.stage === 'negotiation')
     const booked = leads.filter(l => ['advance_paid', 'documents', 'trip_ongoing', 'completed'].includes(l.stage))
-
-    // Stage distribution
-    const stageDist = LEAD_STAGES.map(s => ({
-      ...s,
-      count: leads.filter(l => l.stage === s.id).length,
-    }))
-
-    // Monthly leads (last 6 months)
+    const stageDist = LEAD_STAGES.map(s => ({...s, count: leads.filter(l => l.stage === s.id).length}))
     const monthly = []
     for (let i = 5; i >= 0; i--) {
-      const d = new Date()
-      d.setMonth(d.getMonth() - i)
+      const d = new Date(); d.setMonth(d.getMonth() - i)
       const label = d.toLocaleString('default', { month: 'short' })
       const count = leads.filter(l => {
         const ld = new Date(l.created_at)
@@ -188,16 +145,7 @@ export function CRMProvider({ children }) {
       }).length
       monthly.push({ label, count })
     }
-
-    return {
-      total:      leads.length,
-      thisMonth:  thisMonth.length,
-      active:     active.length,
-      hot:        hot.length,
-      booked:     booked.length,
-      stageDist,
-      monthly,
-    }
+    return { total: leads.length, thisMonth: thisMonth.length, active: active.length, hot: hot.length, booked: booked.length, stageDist, monthly }
   }, [state.leads])
 
   return (
