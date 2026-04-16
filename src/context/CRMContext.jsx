@@ -1,11 +1,10 @@
 // @refresh reset
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
+import React, { createContext, useContext, useReducer, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const CRMContext = createContext(null)
 
-// ── LEAD STAGES ────────────────────────────────────────────────────────────
 export const LEAD_STAGES = [
   { id: 'new_inquiry',   label: 'New Inquiry',       color: '#4F6EF7', bg: '#EEF2FF', emoji: '🆕' },
   { id: 'contacted',     label: 'Contacted',          color: '#6366F1', bg: '#F0F0FF', emoji: '📞' },
@@ -15,7 +14,7 @@ export const LEAD_STAGES = [
   { id: 'documents',     label: 'Docs Collected',     color: '#14B8A6', bg: '#F0FDFA', emoji: '📄' },
   { id: 'trip_ongoing',  label: 'Trip Ongoing',       color: '#0EA5E9', bg: '#F0F9FF', emoji: '✈️' },
   { id: 'completed',     label: 'Completed',          color: '#059669', bg: '#D1FAE5', emoji: '✅' },
-  { id: 'lost',          label: 'Lost',               color: '#EF4444', bg: '#FEF2F2', emoji: '❌' },
+  { id: 'lost',           label: 'Lost',               color: '#EF4444', bg: '#FEF2F2', emoji: '❌' },
 ]
 
 export const LEAD_SOURCES = [
@@ -24,7 +23,6 @@ export const LEAD_SOURCES = [
   'JustDial', 'Other',
 ]
 
-// ── REDUCER ────────────────────────────────────────────────────────────────
 const initialState = {
   leads:      [],
   loading:    false,
@@ -43,7 +41,6 @@ function reducer(state, action) {
   }
 }
 
-// ── MOCK LEADS for localStorage fallback ──────────────────────────────────
 function getMockLeads() {
   return JSON.parse(localStorage.getItem('crm_leads') || '[]')
 }
@@ -51,74 +48,80 @@ function saveMockLeads(leads) {
   localStorage.setItem('crm_leads', JSON.stringify(leads))
 }
 
-// ── PROVIDER ───────────────────────────────────────────────────────────────
 export function CRMProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  // Debug: Log Supabase status on mount
-  useEffect(() => {
-    console.log('🔍 Supabase configured:', isConfigured)
-    console.log('🔍 Supabase URL:', localStorage.getItem('sb_url') || 'Not set')
-  }, [])
-
-  // ── FETCH ALL LEADS ───────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
     try {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) {
-        console.warn('❌ Supabase error:', error.code, error.message)
-        console.log('📦 Using localStorage fallback')
         dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
       } else {
-        console.log('✅ Leads from Supabase:', data?.length || 0)
         dispatch({ type: 'SET_LEADS', payload: data || [] })
       }
-    } catch (err) {
-      console.error('❌ Exception:', err.message)
+    } catch {
       dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
 
-  // ── CREATE LEAD ───────────────────────────────────────────────────
   const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
-    const row = { 
+    const lead = { 
       ...formData, 
+      id: crypto.randomUUID(), 
       stage, 
       created_at: new Date().toISOString(), 
       updated_at: new Date().toISOString() 
     }
     try {
-      const { data, error } = await supabase.from('leads').insert([row]).select().single()
-      if (error) {
-        console.error('❌ Insert error:', error.code, error.message)
-        throw error
-      }
-      console.log('✅ Lead saved to Supabase:', data)
+      const { data, error } = await supabase.from('leads').insert([lead]).select().single()
+      if (error) throw error
       dispatch({ type: 'ADD_LEAD', payload: data })
-      toast.success('Lead saved to database!')
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return data
-    } catch (err) {
-      console.warn('📝 Saving to localStorage instead')
-      const lead = { 
-        ...formData, 
-        id: crypto.randomUUID(), 
-        stage, 
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString() 
-      }
+      toast.success('Lead saved!')
+    } catch {
       const all = [lead, ...getMockLeads()]
       saveMockLeads(all)
       dispatch({ type: 'ADD_LEAD', payload: lead })
-      toast.success('Lead saved locally!')
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return lead
+      toast.success('Lead saved!')
     }
+    dispatch({ type: 'SET_SAVING', payload: false })
+    return lead
+  }, [])
+
+  const updateLead = useCallback(async (id, changes) => {
+    const updated = { ...changes, updated_at: new Date().toISOString() }
+    try {
+      const { error } = await supabase.from('leads').update(updated).eq('id', id)
+      if (error) throw error
+    } catch {
+      const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
+      saveMockLeads(all)
+    }
+    dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated } })
+    toast.success('Lead updated!')
+  }, [state.leads])
+
+  const changeStage = useCallback(async (leadId, newStage) => {
+    const lead = state.leads.find(l => l.id === leadId)
+    if (!lead || lead.stage === newStage) return
+    const newStageLabel = LEAD_STAGES.find(s => s.id === newStage)?.label || newStage
+    await updateLead(leadId, { stage: newStage })
+    toast.success(`Stage: ${newStageLabel}`)
+  }, [state.leads])
+
+  const deleteLead = useCallback(async (id) => {
+    try {
+      const { error } = await supabase.from('leads').delete().eq('id', id)
+      if (error) throw error
+    } catch {
+      saveMockLeads(getMockLeads().filter(l => l.id !== id))
+    }
+    dispatch({ type: 'REMOVE_LEAD', payload: id })
+    toast.success('Lead deleted')
   }, [])
 
   // ── UPDATE LEAD ───────────────────────────────────────────────────
@@ -127,8 +130,7 @@ export function CRMProvider({ children }) {
     try {
       const { error } = await supabase.from('leads').update(updated).eq('id', id)
       if (error) throw error
-    } catch (err) {
-      console.warn('Update lead failed, using localStorage:', err.message)
+    } catch {
       const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
       saveMockLeads(all)
     }
@@ -149,8 +151,7 @@ export function CRMProvider({ children }) {
     try {
       const { error } = await supabase.from('leads').delete().eq('id', id)
       if (error) throw error
-    } catch (err) {
-      console.warn('Delete lead failed:', err.message)
+    } catch {
       saveMockLeads(getMockLeads().filter(l => l.id !== id))
     }
     dispatch({ type: 'REMOVE_LEAD', payload: id })
