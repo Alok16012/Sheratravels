@@ -73,6 +73,8 @@ export function BookingProvider({ children }) {
 
   // ── Fetch single booking ────────────────────────────────
   const fetchBooking = useCallback(async (id) => {
+    // Clear stale booking first so previous booking doesn't flash on screen
+    dispatch({ type: 'SET_CURRENT', payload: null })
     dispatch({ type: 'SET_LOADING', payload: true })
     try {
       const { data, error } = await supabase.from('bookings').select('*').eq('id', id).single()

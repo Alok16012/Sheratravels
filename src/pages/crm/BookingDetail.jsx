@@ -25,7 +25,23 @@ export default function BookingDetail() {
       .then(({ data }) => setPkg(data))
   }, [booking?.package_id])
 
-  if (loading && !booking) return <div className="page-content center">Loading...</div>
+  if (loading || !booking) {
+    if (loading) return <div className="page-content center">Loading...</div>
+    // Not loading and still no booking → true not-found state
+    return (
+      <div className="page-content center" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
+        <h2 style={{ marginBottom: '8px' }}>Booking not found</h2>
+        <p className="text-dim" style={{ marginBottom: '24px' }}>
+          This booking doesn't exist on this device. It may have been created in another browser
+          or removed.
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/crm/bookings')}>
+          ← Back to Bookings
+        </button>
+      </div>
+    )
+  }
 
   const paidAmt = Number(booking?.paid_amount || 0)
   const totalAmt = Number(booking?.total_amount || 0)
