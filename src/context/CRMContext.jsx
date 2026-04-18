@@ -53,18 +53,24 @@ export function CRMProvider({ children }) {
 
   const fetchLeads = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
+    const local = getMockLeads()
     try {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) {
         console.warn('Supabase fetch error, using local:', error.message)
-        dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
+        dispatch({ type: 'SET_LEADS', payload: local })
       } else {
-        console.log('Fetched leads from Supabase:', data?.length)
-        dispatch({ type: 'SET_LEADS', payload: data || [] })
+        // Merge remote + local so leads saved only locally (when Supabase
+        // insert is blocked by RLS) don't disappear. Remote wins on conflict.
+        const remoteIds = new Set((data || []).map(l => l.id))
+        const localOnly = local.filter(l => !remoteIds.has(l.id))
+        const merged = [...(data || []), ...localOnly]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        dispatch({ type: 'SET_LEADS', payload: merged })
       }
     } catch {
-      dispatch({ type: 'SET_LEADS', payload: getMockLeads() })
+      dispatch({ type: 'SET_LEADS', payload: local })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
@@ -104,13 +110,14 @@ export function CRMProvider({ children }) {
   const updateLead = useCallback(async (id, changes) => {
     const updated = { ...changes, updated_at: new Date().toISOString() }
     try {
-      const { error } = await supabase.from('leads').update(updated).eq('id', id)
-      if (error) throw error
-    } catch {
-      const all = getMockLeads().map(l => l.id === id ? { ...l, ...updated } : l)
-      saveMockLeads(all)
+      await supabase.from('leads').update(updated).eq('id', id)
+    } catch { /* ignore — local copy below keeps it in sync */ }
+    // Always mirror to localStorage so local-only leads persist edits too
+    const local = getMockLeads()
+    if (local.some(l => l.id === id)) {
+      saveMockLeads(local.map(l => l.id === id ? { ...l, ...updated } : l))
     }
-    dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated } })
+    dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated, id } })
     toast.success('Lead updated!')
   }, [state.leads])
 
@@ -124,11 +131,10 @@ export function CRMProvider({ children }) {
 
   const deleteLead = useCallback(async (id) => {
     try {
-      const { error } = await supabase.from('leads').delete().eq('id', id)
-      if (error) throw error
-    } catch {
-      saveMockLeads(getMockLeads().filter(l => l.id !== id))
-    }
+      await supabase.from('leads').delete().eq('id', id)
+    } catch { /* ignore */ }
+    // Always remove from localStorage too so local-only leads are deleted
+    saveMockLeads(getMockLeads().filter(l => l.id !== id))
     dispatch({ type: 'REMOVE_LEAD', payload: id })
     toast.success('Lead deleted')
   }, [])

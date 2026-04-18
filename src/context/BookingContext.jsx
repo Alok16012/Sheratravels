@@ -54,13 +54,19 @@ export function BookingProvider({ children }) {
   // ── Fetch all bookings ──────────────────────────────────
   const fetchBookings = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
+    const local = mockGet('crm_bookings')
     try {
       const { data, error } = await supabase
         .from('bookings').select('*').order('created_at', { ascending: false })
       if (error) throw error
-      dispatch({ type: 'SET_BOOKINGS', payload: data || [] })
+      // Merge remote + local so bookings saved only locally don't disappear
+      const remoteIds = new Set((data || []).map(b => b.id))
+      const localOnly = local.filter(b => !remoteIds.has(b.id))
+      const merged = [...(data || []), ...localOnly]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      dispatch({ type: 'SET_BOOKINGS', payload: merged })
     } catch {
-      dispatch({ type: 'SET_BOOKINGS', payload: mockGet('crm_bookings') })
+      dispatch({ type: 'SET_BOOKINGS', payload: local })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
