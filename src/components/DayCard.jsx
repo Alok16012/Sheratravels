@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePackage } from '../context/PackageContext'
+import toast from 'react-hot-toast'
 
 const MEALS = ['Stay', 'Breakfast', 'Lunch', 'Dinner']
 
@@ -12,20 +13,24 @@ export default function DayCard({ day, idx }) {
 
   const openPicker = (target) => {
     if (library.length === 0) {
-      alert('Upload photos in the Photos tab first!')
+      toast.error('Upload photos in the Photos tab first!')
       return
     }
     setPickerTarget(target)
   }
 
-  const handlePickerSelect = (photo) => {
-    if (pickerTarget === 'hotel') {
-      setHotelPhoto(idx, photo)
-    } else {
-      const slot = parseInt(pickerTarget.replace('slot-', ''))
-      setDayPhoto(idx, slot, photo)
-    }
+  const handlePickerSelect = async (photo) => {
     setPickerTarget(null)
+    try {
+      if (pickerTarget === 'hotel') {
+        await setHotelPhoto(idx, photo)
+      } else {
+        const slot = parseInt(pickerTarget.replace('slot-', ''))
+        await setDayPhoto(idx, slot, photo)
+      }
+    } catch (e) {
+      toast.error('Failed to assign photo: ' + (e.message || 'Unknown error'))
+    }
   }
 
   const addTag = (field, val) => {

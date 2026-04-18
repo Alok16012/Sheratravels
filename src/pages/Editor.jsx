@@ -51,8 +51,12 @@ export default function Editor() {
 
   const handlePrint = () => {
     setPreviewOpen(true)
+    const originalTitle = document.title
+    document.title = pkg?.title || 'Itinerary'
     setTimeout(() => {
       window.print()
+      // Restore title after print dialog closes
+      setTimeout(() => { document.title = originalTitle }, 1000)
     }, 500)
   }
 

@@ -44,7 +44,12 @@ function createMockClient() {
     const key = ['leads','lead_notes','bookings','payments'].includes(table)
       ? `crm_${table === 'lead_notes' ? 'notes' : table}`
       : `mock_${table}`
-    localStorage.setItem(key, JSON.stringify(store[table]))
+    try {
+      localStorage.setItem(key, JSON.stringify(store[table]))
+      return null
+    } catch (e) {
+      return { message: 'Storage full. Try uploading smaller images.' }
+    }
   }
 
   const makeBuilder = (table) => {
@@ -67,7 +72,8 @@ function createMockClient() {
       if (_op === 'insert') {
         const added = _data.map(d => ({ ...d, id: d.id || crypto.randomUUID(), created_at: new Date().toISOString() }))
         store[table] = [...(store[table] || []), ...added]
-        persist(table)
+        const persistErr = persist(table)
+        if (persistErr) return { data: null, error: persistErr }
         return _single ? { data: added[0], error: null } : { data: added, error: null }
       }
       if (_op === 'update') {
@@ -133,21 +139,57 @@ export function getStoredCredentials() {
   }
 }
 
-// ── Helper: Upload image file to Supabase Storage and return public URL ────
-export async function uploadPhoto(file, folder = 'library') {
-  if (!isConfigured) {
-    return new Promise((resolve) => {
+// ── Helper: Compress image to avoid localStorage quota issues in offline mode ──
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 1024
+      let w = img.naturalWidth
+      let h = img.naturalHeight
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+        else { w = Math.round(w * MAX / h); h = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/jpeg', 0.75))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      // Fallback to plain FileReader if image fails to load
       const reader = new FileReader()
       reader.onload = (e) => resolve(e.target.result)
       reader.readAsDataURL(file)
-    })
+    }
+    img.src = objectUrl
+  })
+}
+
+// ── Helper: Upload image file to Supabase Storage and return public URL ────
+export async function uploadPhoto(file, folder = 'library') {
+  if (!isConfigured) {
+    return compressImage(file)
   }
   const ext = file.name.split('.').pop()
   const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('itinerary-photos')
     .upload(fileName, file, { upsert: false })
-  if (error) throw error
+  if (error) {
+    // Graceful fallback: if bucket is missing or RLS blocks upload,
+    // store the image as a compressed base64 data URL so the app keeps working.
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('bucket') || msg.includes('not found') || msg.includes('row-level') || msg.includes('policy')) {
+      console.warn('Supabase storage unavailable, falling back to base64:', error.message)
+      return compressImage(file)
+    }
+    throw error
+  }
   const { data: urlData } = supabase.storage.from('itinerary-photos').getPublicUrl(fileName)
   return urlData.publicUrl
 }

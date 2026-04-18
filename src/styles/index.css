@@ -851,41 +851,87 @@ body {
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  .preview-doc, .preview-doc * {
-    visibility: visible;
-  }
-
-  .preview-doc {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 20px;
-    box-shadow: none;
-    background: white;
-  }
-
+  /* Hide everything that isn't the preview modal so there are no duplicate/blank pages */
+  .editor-sidebar,
+  .editor-sidebar-overlay,
+  .editor-canvas,
   .preview-close-bar {
     display: none !important;
   }
 
+  /* Hide toast notifications in print */
+  [aria-live="polite"],
+  [aria-live="assertive"] {
+    display: none !important;
+  }
+
+  /* Flatten the preview overlay so it prints as normal flowing content */
+  .preview-overlay {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  .preview-doc {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    border-radius: 0 !important;
+  }
+
   .pv-hero {
-    height: 200px;
+    height: 220px;
+    border-radius: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .pv-hero-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%) !important;
+  }
+
+  .pv-badge {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0, 0, 0, 0.35) !important;
   }
 
   .pv-section, .pv-day, .pv-tc {
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .pv-day {
+    margin-bottom: 12px;
+  }
+
+  .pv-day-photos img {
+    height: 140px !important;
+  }
+
+  .pv-two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pv-header {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   @page {
     size: A4;
-    margin: 15mm;
+    margin: 12mm;
   }
 }
 

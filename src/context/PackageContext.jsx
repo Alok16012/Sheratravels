@@ -162,7 +162,7 @@ export function PackageProvider({ children }) {
 
       // Upsert days
       await Promise.all(days.map(async (d, i) => {
-        const { id: did, day_photos: _, _open: __, ...dData } = d
+        const { id: did, day_photos: pendingPhotos, _open: __, ...dData } = d
         const payload = { ...dData, sort_order: i, package_id: pkg.id }
         if (did) {
           const { error } = await supabase.from('days').update(payload).eq('id', did)
@@ -170,7 +170,21 @@ export function PackageProvider({ children }) {
         } else {
           const { data, error } = await supabase.from('days').insert([payload]).select().single()
           if (error) throw error
-          if (data) d.id = data.id
+          if (data) {
+            d.id = data.id
+            // Save any photos that were assigned before this day had a DB id
+            const unsaved = (pendingPhotos || []).filter(ph => !ph.id)
+            await Promise.all(unsaved.map(async (ph) => {
+              const { data: pd } = await supabase.from('day_photos').insert([{
+                day_id: data.id,
+                photo_url: ph.photo_url,
+                tag_name: ph.tag_name,
+                tag_type: ph.tag_type,
+                slot_index: ph.slot_index,
+              }]).select().single()
+              if (pd) ph.id = pd.id
+            }))
+          }
         }
       }))
       dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' })
@@ -269,7 +283,14 @@ export function PackageProvider({ children }) {
       if (error) throw error
       dispatch({ type: 'SET_LIBRARY', payload: [data, ...state.library] })
     } catch (e) {
-      toast.error('Upload failed. Have you added Supabase credentials?')
+      const msg = e?.message || ''
+      if (msg.includes('Storage full') || msg.includes('quota')) {
+        toast.error('Storage full — images are too large. Try smaller photos.')
+      } else if (msg.includes('bucket') || msg.includes('storage')) {
+        toast.error('Storage bucket not found. Check your Supabase setup.')
+      } else {
+        toast.error('Upload failed: ' + (msg || 'Check your connection or Supabase credentials.'))
+      }
     }
   }, [state.library])
 
