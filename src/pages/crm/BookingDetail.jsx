@@ -12,6 +12,9 @@ export default function BookingDetail() {
   const { currentBooking: booking, payments, loading, fetchBooking, fetchPayments, updateBooking, recordPayment } = useBooking()
 
   const [activeTab, setActiveTab] = useState('summary')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [pkg, setPkg] = useState(null)
 
   useEffect(() => {
@@ -144,7 +147,38 @@ export default function BookingDetail() {
                   ))}
                 </tbody>
               </table>
-              <button className="btn btn-primary" style={{ marginTop: '24px' }}>Record Manual Payment</button>
+              <button className="btn btn-primary" style={{ marginTop: '24px' }} onClick={() => setShowPaymentModal(true)}>Record Manual Payment</button>
+            </div>
+          )}
+
+          {showPaymentModal && (
+            <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+              <div className="modal-box" onClick={e => e.stopPropagation()} style={{ padding: 24, maxWidth: 400 }}>
+                <h3>Record Payment</h3>
+                <div className="field">
+                  <label>Amount (INR)</label>
+                  <input className="glass-input" type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} placeholder="Enter amount" />
+                </div>
+                <div className="field">
+                  <label>Method</label>
+                  <select className="glass-input" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="upi">UPI</option>
+                    <option value="card">Card</option>
+                  </select>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-ghost" onClick={() => setShowPaymentModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={async () => {
+                    if (!paymentAmount) return toast.error('Enter amount')
+                    await recordPayment(booking.id, { amount: Number(paymentAmount), method: paymentMethod, type: 'advance', status: 'success' })
+                    setPaymentAmount('')
+                    setShowPaymentModal(false)
+                    toast.success('Payment recorded!')
+                  }}>Save Payment</button>
+                </div>
+              </div>
             </div>
           )}
 

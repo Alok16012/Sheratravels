@@ -1,6 +1,12 @@
 export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days }) {
   if (!open) return null
 
+  days = days?.map(d => ({
+    ...d,
+    hotspots: Array.isArray(d.hotspots) ? d.hotspots : (Array.isArray(d.Hotspots) ? d.Hotspots : []),
+    themes: Array.isArray(d.themes) ? d.themes : (Array.isArray(d.Themes) ? d.Themes : [])
+  }))
+
   // Fallback: read GST & company defaults from localStorage if not on the package
   const savedCompany = JSON.parse(localStorage.getItem('company_defaults') || '{}')
 
@@ -155,7 +161,11 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
                 <div style={{ marginTop: 10 }}>
                   <strong className="pv-section-label">📍 Hotspots</strong>
                   <div className="pv-hotspots" style={{ marginTop: 6 }}>
-                    {day.hotspots.map((h, i) => <span key={i} className="pv-hs-tag">{h}</span>)}
+                    {day.hotspots.map((h, i) => (
+                      <span key={i} className="pv-hs-tag" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {h.toString()}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
@@ -164,7 +174,11 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
                 <div style={{ marginTop: 8 }}>
                   <strong className="pv-section-label">🎯 Themes</strong>
                   <div className="pv-hotspots" style={{ marginTop: 6 }}>
-                    {day.themes.map((t, i) => <span key={i} className="pv-theme-tag">{t}</span>)}
+                    {day.themes.map((t, i) => (
+                      <span key={i} className="pv-theme-tag" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {t.toString()}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}

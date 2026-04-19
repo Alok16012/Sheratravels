@@ -865,7 +865,7 @@ body {
 .pv-footer {
   text-align: center;
   padding-top: 24px;
-  border-top: 2px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
   margin-top: 24px;
 }
 
@@ -885,6 +885,11 @@ body {
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
   }
 
   /* Hide everything that isn't the preview modal so there are no duplicate/blank pages */
@@ -919,6 +924,7 @@ body {
     box-shadow: none !important;
     background: white !important;
     border-radius: 0 !important;
+    border: none !important;
   }
 
   .pv-hero {
@@ -945,6 +951,7 @@ body {
 
   .pv-day {
     margin-bottom: 12px;
+    border: none !important;
   }
 
   .pv-day-photos img {
@@ -960,9 +967,76 @@ body {
     break-inside: avoid;
   }
 
+  .pv-hs-tag {
+    background: #dbeafe !important;
+    color: #1d4ed8 !important;
+    border-radius: 20px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    text-decoration: none !important;
+  }
+
+  .pv-hs-tag a,
+  .pv-theme-tag a {
+    color: inherit !important;
+    text-decoration: none !important;
+    pointer-events: none;
+  }
+
+  a[href] {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  .pv-hotspots a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  .pv-theme-tag {
+    background: #d1fae5 !important;
+    color: #047857 !important;
+    border-radius: 20px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .pv-photo-caption {
+    background: rgba(0, 0, 0, 0.7) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force remove any vertical lines/borders */
+  [style*="border-left"],
+  [style*="border-right"] {
+    border: none !important;
+  }
+
+  .pv-day-head,
+  .pv-day-body {
+    border: none !important;
+  }
+
+  .pv-footer {
+    border-top: 1px solid #e5e7eb !important;
+    background: white !important;
+  }
+
+  .pv-footer h3,
+  .pv-footer p {
+    color: black !important;
+  }
+
   @page {
     size: A4;
     margin: 12mm;
+  }
+
+  /* Chrome print settings - remove header/footer */
+  @page:first {
+    margin-top: 10mm;
+    margin-bottom: 10mm;
   }
 }
 
