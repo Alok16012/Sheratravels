@@ -78,33 +78,33 @@ export function CRMProvider({ children }) {
   const addLead = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
-    const lead = { 
-      ...formData, 
-      id: crypto.randomUUID(), 
-      stage, 
-      created_at: new Date().toISOString(), 
-      updated_at: new Date().toISOString() 
+    const lead = {
+      ...formData,
+      id: crypto.randomUUID(),
+      stage,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
+    // Always mirror to localStorage first so the lead survives even if
+    // Supabase's SELECT policy hides it from subsequent fetches.
+    saveMockLeads([lead, ...getMockLeads().filter(l => l.id !== lead.id)])
+    let saved = lead
     try {
       const { data, error } = await supabase.from('leads').insert([lead]).select().single()
       if (error) {
-        console.error('Supabase insert error:', error.message)
-        throw error
+        console.warn('Supabase insert failed, keeping localStorage copy:', error.message)
+      } else if (data) {
+        saved = data
+        // Update the localStorage copy with any server-side fields (e.g. normalized values)
+        saveMockLeads([data, ...getMockLeads().filter(l => l.id !== data.id)])
       }
-      console.log('Lead saved to Supabase:', data)
-      dispatch({ type: 'ADD_LEAD', payload: data || lead })
-      toast.success('Lead saved!')
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return data || lead
     } catch (err) {
-      console.log('Saving to localStorage instead')
-      const all = [lead, ...getMockLeads()]
-      saveMockLeads(all)
-      dispatch({ type: 'ADD_LEAD', payload: lead })
-      toast.success('Lead saved!')
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return lead
+      console.warn('Supabase insert threw, keeping localStorage copy:', err?.message)
     }
+    dispatch({ type: 'ADD_LEAD', payload: saved })
+    toast.success('Lead saved!')
+    dispatch({ type: 'SET_SAVING', payload: false })
+    return saved
   }, [])
 
   const updateLead = useCallback(async (id, changes) => {

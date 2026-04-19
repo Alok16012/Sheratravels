@@ -103,21 +103,31 @@ export function BookingProvider({ children }) {
   // ── Create booking ──────────────────────────────────────
   const createBooking = useCallback(async (formData) => {
     dispatch({ type: 'SET_SAVING', payload: true })
+    const advance = Math.round((formData.total_amount * (formData.advance_percent || 20)) / 100)
+    const booking = {
+      ...formData,
+      id: crypto.randomUUID(),
+      booking_ref: genRef(),
+      booking_token: crypto.randomUUID(),
+      advance_amount: advance,
+      balance_amount: formData.total_amount - advance,
+      paid_amount: 0,
+      status: 'confirmed',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    // Always persist locally first so it survives even if Supabase SELECT
+    // policy later hides the row from fetches.
+    mockSave('crm_bookings', [booking, ...mockGet('crm_bookings').filter(b => b.id !== booking.id)])
+    let saved = booking
     try {
-      const advance = Math.round((formData.total_amount * (formData.advance_percent || 20)) / 100)
-      const row = {
-        ...formData,
-        booking_ref:    genRef(),
-        advance_amount: advance,
-        balance_amount: formData.total_amount - advance,
-        paid_amount:    0,
-        status:         'confirmed',
-        created_at:     new Date().toISOString(),
-        updated_at:     new Date().toISOString(),
-      }
-      const { data, error } = await supabase.from('bookings').insert([row]).select().single()
+      const { data, error } = await supabase.from('bookings').insert([booking]).select().single()
       if (error) throw error
-      dispatch({ type: 'ADD_BOOKING', payload: data })
+      if (data) {
+        saved = data
+        // Update local mirror with server-normalized fields
+        mockSave('crm_bookings', [data, ...mockGet('crm_bookings').filter(b => b.id !== data.id)])
+      }
       // Update lead stage to 'advance_paid' (silently handle if fails)
       if (formData.lead_id) {
         try {
@@ -126,31 +136,13 @@ export function BookingProvider({ children }) {
           console.warn('Could not update lead stage:', e)
         }
       }
-      toast.success(`Booking ${data.booking_ref} created!`)
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return data
     } catch (e) {
-      // localStorage fallback
-      const advance = Math.round((formData.total_amount * (formData.advance_percent || 20)) / 100)
-      const booking = {
-        ...formData,
-        id: crypto.randomUUID(),
-        booking_ref: genRef(),
-        booking_token: crypto.randomUUID(),
-        advance_amount: advance,
-        balance_amount: formData.total_amount - advance,
-        paid_amount: 0,
-        status: 'confirmed',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      const all = [booking, ...mockGet('crm_bookings')]
-      mockSave('crm_bookings', all)
-      dispatch({ type: 'ADD_BOOKING', payload: booking })
-      toast.success(`Booking ${booking.booking_ref} created!`)
-      dispatch({ type: 'SET_SAVING', payload: false })
-      return booking
+      console.warn('Supabase insert failed, keeping localStorage copy:', e?.message)
     }
+    dispatch({ type: 'ADD_BOOKING', payload: saved })
+    toast.success(`Booking ${saved.booking_ref} created!`)
+    dispatch({ type: 'SET_SAVING', payload: false })
+    return saved
   }, [])
 
   // ── Update booking ──────────────────────────────────────
