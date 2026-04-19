@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, isConfigured } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const BookingContext = createContext(null)
@@ -21,9 +21,9 @@ function genRef() {
   return `ST-${yr}-${num}`
 }
 
-// ── localStorage mock helpers ─────────────────────────────
-const mockGet  = (k) => JSON.parse(localStorage.getItem(k) || '[]')
-const mockSave = (k, v) => localStorage.setItem(k, JSON.stringify(v))
+function warnUnconfigured() {
+  toast.error('Supabase not configured. Go to Admin → Connect Cloud.')
+}
 
 // ── Reducer ───────────────────────────────────────────────
 const initial = { bookings: [], currentBooking: null, payments: [], loading: false, saving: false }
@@ -54,19 +54,15 @@ export function BookingProvider({ children }) {
   // ── Fetch all bookings ──────────────────────────────────
   const fetchBookings = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
-    const local = mockGet('crm_bookings')
     try {
       const { data, error } = await supabase
         .from('bookings').select('*').order('created_at', { ascending: false })
       if (error) throw error
-      // Merge remote + local so bookings saved only locally don't disappear
-      const remoteIds = new Set((data || []).map(b => b.id))
-      const localOnly = local.filter(b => !remoteIds.has(b.id))
-      const merged = [...(data || []), ...localOnly]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      dispatch({ type: 'SET_BOOKINGS', payload: merged })
-    } catch {
-      dispatch({ type: 'SET_BOOKINGS', payload: local })
+      dispatch({ type: 'SET_BOOKINGS', payload: data || [] })
+    } catch (err) {
+      console.error('fetchBookings error:', err)
+      if (isConfigured) toast.error(`Load failed: ${err.message || 'check RLS/schema'}`)
+      dispatch({ type: 'SET_BOOKINGS', payload: [] })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
@@ -80,9 +76,10 @@ export function BookingProvider({ children }) {
       const { data, error } = await supabase.from('bookings').select('*').eq('id', id).single()
       if (error) throw error
       dispatch({ type: 'SET_CURRENT', payload: data })
-    } catch {
-      const b = mockGet('crm_bookings').find(x => x.id === id) || null
-      dispatch({ type: 'SET_CURRENT', payload: b })
+    } catch (err) {
+      console.error('fetchBooking error:', err)
+      if (isConfigured) toast.error(`Booking load failed: ${err.message || 'not found'}`)
+      dispatch({ type: 'SET_CURRENT', payload: null })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
@@ -95,20 +92,20 @@ export function BookingProvider({ children }) {
         .eq('booking_token', token).single()
       if (error) throw error
       return data
-    } catch {
-      return mockGet('crm_bookings').find(x => x.booking_token === token) || null
+    } catch (err) {
+      console.error('fetchBookingByToken error:', err)
+      return null
     }
   }, [])
 
   // ── Create booking ──────────────────────────────────────
   const createBooking = useCallback(async (formData) => {
+    if (!isConfigured) { warnUnconfigured(); return null }
     dispatch({ type: 'SET_SAVING', payload: true })
     const advance = Math.round((formData.total_amount * (formData.advance_percent || 20)) / 100)
-    const booking = {
+    const row = {
       ...formData,
-      id: crypto.randomUUID(),
       booking_ref: genRef(),
-      booking_token: crypto.randomUUID(),
       advance_amount: advance,
       balance_amount: formData.total_amount - advance,
       paid_amount: 0,
@@ -116,19 +113,10 @@ export function BookingProvider({ children }) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
-    // Always persist locally first so it survives even if Supabase SELECT
-    // policy later hides the row from fetches.
-    mockSave('crm_bookings', [booking, ...mockGet('crm_bookings').filter(b => b.id !== booking.id)])
-    let saved = booking
     try {
-      const { data, error } = await supabase.from('bookings').insert([booking]).select().single()
+      const { data, error } = await supabase.from('bookings').insert([row]).select().single()
       if (error) throw error
-      if (data) {
-        saved = data
-        // Update local mirror with server-normalized fields
-        mockSave('crm_bookings', [data, ...mockGet('crm_bookings').filter(b => b.id !== data.id)])
-      }
-      // Update lead stage to 'advance_paid' (silently handle if fails)
+      dispatch({ type: 'ADD_BOOKING', payload: data })
       if (formData.lead_id) {
         try {
           await supabase.from('leads').update({ stage: 'advance_paid', updated_at: new Date().toISOString() }).eq('id', formData.lead_id)
@@ -136,58 +124,64 @@ export function BookingProvider({ children }) {
           console.warn('Could not update lead stage:', e)
         }
       }
-    } catch (e) {
-      console.warn('Supabase insert failed, keeping localStorage copy:', e?.message)
+      toast.success(`Booking ${data.booking_ref} created!`)
+      return data
+    } catch (err) {
+      console.error('createBooking error:', err)
+      toast.error(`Save failed: ${err.message || 'check RLS/schema'}`)
+      throw err
+    } finally {
+      dispatch({ type: 'SET_SAVING', payload: false })
     }
-    dispatch({ type: 'ADD_BOOKING', payload: saved })
-    toast.success(`Booking ${saved.booking_ref} created!`)
-    dispatch({ type: 'SET_SAVING', payload: false })
-    return saved
   }, [])
 
   // ── Update booking ──────────────────────────────────────
   const updateBooking = useCallback(async (id, changes) => {
+    if (!isConfigured) { warnUnconfigured(); return null }
     const updated = { ...changes, updated_at: new Date().toISOString() }
     try {
-      const { data } = await supabase.from('bookings').update(updated).eq('id', id).select().single()
+      const { data, error } = await supabase.from('bookings').update(updated).eq('id', id).select().single()
+      if (error) throw error
       dispatch({ type: 'UPD_BOOKING', payload: data })
       return data
-    } catch {
-      const all = mockGet('crm_bookings')
-      const found = all.find(b => b.id === id)
-      const merged = { ...found, ...updated }
-      mockSave('crm_bookings', all.map(b => b.id === id ? merged : b))
-      dispatch({ type: 'UPD_BOOKING', payload: merged })
-      return merged
+    } catch (err) {
+      console.error('updateBooking error:', err)
+      toast.error(`Update failed: ${err.message || 'check RLS/schema'}`)
+      throw err
     }
   }, [])
 
   // ── Delete booking ──────────────────────────────────────
   const deleteBooking = useCallback(async (id) => {
+    if (!isConfigured) { warnUnconfigured(); return }
     try {
-      await supabase.from('bookings').delete().eq('id', id)
-    } catch {
-      mockSave('crm_bookings', mockGet('crm_bookings').filter(b => b.id !== id))
+      const { error } = await supabase.from('bookings').delete().eq('id', id)
+      if (error) throw error
+      dispatch({ type: 'DEL_BOOKING', payload: id })
+      toast.success('Booking deleted')
+    } catch (err) {
+      console.error('deleteBooking error:', err)
+      toast.error(`Delete failed: ${err.message || 'check RLS/schema'}`)
     }
-    dispatch({ type: 'DEL_BOOKING', payload: id })
-    toast.success('Booking deleted')
   }, [])
 
   // ── Fetch payments for a booking ────────────────────────
   const fetchPayments = useCallback(async (bookingId) => {
     try {
-      const { data } = await supabase.from('payments').select('*').eq('booking_id', bookingId).order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('payments').select('*').eq('booking_id', bookingId).order('created_at', { ascending: false })
+      if (error) throw error
       dispatch({ type: 'SET_PAYMENTS', payload: data || [] })
-    } catch {
-      dispatch({ type: 'SET_PAYMENTS', payload: mockGet('crm_payments').filter(p => p.booking_id === bookingId) })
+    } catch (err) {
+      console.error('fetchPayments error:', err)
+      dispatch({ type: 'SET_PAYMENTS', payload: [] })
     }
   }, [])
 
   // ── Record payment (after Razorpay success) ─────────────
   const recordPayment = useCallback(async (bookingId, paymentData) => {
-    const booking = state.bookings.find(b => b.id === bookingId) ||
-      mockGet('crm_bookings').find(b => b.id === bookingId)
-    if (!booking) return
+    if (!isConfigured) { warnUnconfigured(); return }
+    const booking = state.bookings.find(b => b.id === bookingId)
+    if (!booking) { toast.error('Booking not found'); return }
 
     const newPaid = (Number(booking.paid_amount) || 0) + Number(paymentData.amount)
     const newStatus = newPaid >= booking.total_amount ? 'fully_paid'
@@ -208,35 +202,31 @@ export function BookingProvider({ children }) {
     }
 
     try {
-      const { data: pay } = await supabase.from('payments').insert([payRow]).select().single()
+      const { data: pay, error } = await supabase.from('payments').insert([payRow]).select().single()
+      if (error) throw error
       dispatch({ type: 'ADD_PAYMENT', payload: pay })
-    } catch {
-      const p = { ...payRow, id: crypto.randomUUID() }
-      mockSave('crm_payments', [p, ...mockGet('crm_payments')])
-      dispatch({ type: 'ADD_PAYMENT', payload: p })
+      await updateBooking(bookingId, { paid_amount: newPaid, status: newStatus })
+      toast.success(`₹${Number(paymentData.amount).toLocaleString('en-IN')} payment recorded!`)
+    } catch (err) {
+      console.error('recordPayment error:', err)
+      toast.error(`Payment failed: ${err.message || 'check RLS/schema'}`)
     }
-
-    // Update booking paid_amount + status
-    await updateBooking(bookingId, { paid_amount: newPaid, status: newStatus })
-    toast.success(`₹${Number(paymentData.amount).toLocaleString('en-IN')} payment recorded!`)
   }, [state.bookings, updateBooking])
 
   // ── Update customer details from public form ─────────────
   const updateFromPublicForm = useCallback(async (token, formData) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
         .update({ ...formData, updated_at: new Date().toISOString() })
         .eq('booking_token', token)
         .select().single()
+      if (error) throw error
       return data
-    } catch {
-      const all = mockGet('crm_bookings')
-      const found = all.find(b => b.booking_token === token)
-      if (!found) return null
-      const merged = { ...found, ...formData }
-      mockSave('crm_bookings', all.map(b => b.booking_token === token ? merged : b))
-      return merged
+    } catch (err) {
+      console.error('updateFromPublicForm error:', err)
+      toast.error(`Save failed: ${err.message || 'check RLS/schema'}`)
+      return null
     }
   }, [])
 

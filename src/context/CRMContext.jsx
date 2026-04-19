@@ -1,6 +1,6 @@
 // @refresh reset
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, isConfigured } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const CRMContext = createContext(null)
@@ -41,11 +41,8 @@ function reducer(state, action) {
   }
 }
 
-function getMockLeads() {
-  return JSON.parse(localStorage.getItem('crm_leads') || '[]')
-}
-function saveMockLeads(leads) {
-  localStorage.setItem('crm_leads', JSON.stringify(leads))
+function warnUnconfigured() {
+  toast.error('Supabase not configured. Go to Admin → Connect Cloud.')
 }
 
 export function CRMProvider({ children }) {
@@ -53,29 +50,21 @@ export function CRMProvider({ children }) {
 
   const fetchLeads = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true })
-    const local = getMockLeads()
     try {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
-      if (error) {
-        console.warn('Supabase fetch error, using local:', error.message)
-        dispatch({ type: 'SET_LEADS', payload: local })
-      } else {
-        // Merge remote + local so leads saved only locally (when Supabase
-        // insert is blocked by RLS) don't disappear. Remote wins on conflict.
-        const remoteIds = new Set((data || []).map(l => l.id))
-        const localOnly = local.filter(l => !remoteIds.has(l.id))
-        const merged = [...(data || []), ...localOnly]
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        dispatch({ type: 'SET_LEADS', payload: merged })
-      }
-    } catch {
-      dispatch({ type: 'SET_LEADS', payload: local })
+      if (error) throw error
+      dispatch({ type: 'SET_LEADS', payload: data || [] })
+    } catch (err) {
+      console.error('fetchLeads error:', err)
+      if (isConfigured) toast.error(`Load failed: ${err.message || 'check RLS/schema'}`)
+      dispatch({ type: 'SET_LEADS', payload: [] })
     }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
 
   const addLead = useCallback(async (formData) => {
+    if (!isConfigured) { warnUnconfigured(); return null }
     dispatch({ type: 'SET_SAVING', payload: true })
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
     const lead = {
@@ -83,42 +72,39 @@ export function CRMProvider({ children }) {
       id: crypto.randomUUID(),
       stage,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }
-    // Always mirror to localStorage first so the lead survives even if
-    // Supabase's SELECT policy hides it from subsequent fetches.
-    saveMockLeads([lead, ...getMockLeads().filter(l => l.id !== lead.id)])
-    let saved = lead
     try {
       const { data, error } = await supabase.from('leads').insert([lead]).select().single()
-      if (error) {
-        console.warn('Supabase insert failed, keeping localStorage copy:', error.message)
-      } else if (data) {
-        saved = data
-        // Update the localStorage copy with any server-side fields (e.g. normalized values)
-        saveMockLeads([data, ...getMockLeads().filter(l => l.id !== data.id)])
-      }
+      if (error) throw error
+      const saved = data || lead
+      dispatch({ type: 'ADD_LEAD', payload: saved })
+      toast.success('Lead saved to Supabase!')
+      return saved
     } catch (err) {
-      console.warn('Supabase insert threw, keeping localStorage copy:', err?.message)
+      console.error('addLead error:', err)
+      toast.error(`Save failed: ${err.message || 'check RLS/schema'}`)
+      throw err
+    } finally {
+      dispatch({ type: 'SET_SAVING', payload: false })
     }
-    dispatch({ type: 'ADD_LEAD', payload: saved })
-    toast.success('Lead saved!')
-    dispatch({ type: 'SET_SAVING', payload: false })
-    return saved
   }, [])
 
   const updateLead = useCallback(async (id, changes) => {
+    if (!isConfigured) { warnUnconfigured(); return null }
     const updated = { ...changes, updated_at: new Date().toISOString() }
     try {
-      await supabase.from('leads').update(updated).eq('id', id)
-    } catch { /* ignore — local copy below keeps it in sync */ }
-    // Always mirror to localStorage so local-only leads persist edits too
-    const local = getMockLeads()
-    if (local.some(l => l.id === id)) {
-      saveMockLeads(local.map(l => l.id === id ? { ...l, ...updated } : l))
+      const { data, error } = await supabase.from('leads').update(updated).eq('id', id).select().single()
+      if (error) throw error
+      const merged = data || { ...state.leads.find(l => l.id === id), ...updated, id }
+      dispatch({ type: 'UPDATE_LEAD', payload: merged })
+      toast.success('Lead updated!')
+      return merged
+    } catch (err) {
+      console.error('updateLead error:', err)
+      toast.error(`Update failed: ${err.message || 'check RLS/schema'}`)
+      throw err
     }
-    dispatch({ type: 'UPDATE_LEAD', payload: { ...state.leads.find(l => l.id === id), ...updated, id } })
-    toast.success('Lead updated!')
   }, [state.leads])
 
   const changeStage = useCallback(async (leadId, newStage) => {
@@ -127,16 +113,19 @@ export function CRMProvider({ children }) {
     const newStageLabel = LEAD_STAGES.find(s => s.id === newStage)?.label || newStage
     await updateLead(leadId, { stage: newStage })
     toast.success(`Stage: ${newStageLabel}`)
-  }, [state.leads])
+  }, [state.leads, updateLead])
 
   const deleteLead = useCallback(async (id) => {
+    if (!isConfigured) { warnUnconfigured(); return }
     try {
-      await supabase.from('leads').delete().eq('id', id)
-    } catch { /* ignore */ }
-    // Always remove from localStorage too so local-only leads are deleted
-    saveMockLeads(getMockLeads().filter(l => l.id !== id))
-    dispatch({ type: 'REMOVE_LEAD', payload: id })
-    toast.success('Lead deleted')
+      const { error } = await supabase.from('leads').delete().eq('id', id)
+      if (error) throw error
+      dispatch({ type: 'REMOVE_LEAD', payload: id })
+      toast.success('Lead deleted')
+    } catch (err) {
+      console.error('deleteLead error:', err)
+      toast.error(`Delete failed: ${err.message || 'check RLS/schema'}`)
+    }
   }, [])
 
   const getStats = useCallback(() => {
