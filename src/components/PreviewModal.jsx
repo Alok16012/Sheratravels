@@ -128,10 +128,16 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
               </div>
 
               {photos.length > 0 && (
-                <div className="pv-day-photos" style={{ gridTemplateColumns: `repeat(${Math.min(photos.length, 3)}, 1fr)` }}>
-                  {photos.slice(0, 3).map((ph, pi) => (
-                    <img key={pi} src={ph.photo_url} alt={ph.tag_name || ''} />
-                  ))}
+                <div style={{ marginTop: 8, marginBottom: 10 }}>
+                  <strong className="pv-section-label">📸 Sightseeing Photos</strong>
+                  <div className="pv-day-photos" style={{ gridTemplateColumns: `repeat(${Math.min(photos.length, 3)}, 1fr)`, marginTop: 6 }}>
+                    {photos.slice(0, 3).map((ph, pi) => (
+                      <div key={pi} className="pv-photo-wrap">
+                        <img src={ph.photo_url} alt={ph.tag_name || ''} />
+                        {ph.tag_name && <div className="pv-photo-caption">{ph.tag_name}</div>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -147,7 +153,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
 
               {(day.hotspots || []).length > 0 && (
                 <div style={{ marginTop: 10 }}>
-                  <strong style={{ fontSize: 11, fontWeight: 800, color: 'var(--gray)' }}>▶ HOTSPOTS</strong>
+                  <strong className="pv-section-label">📍 Hotspots</strong>
                   <div className="pv-hotspots" style={{ marginTop: 6 }}>
                     {day.hotspots.map((h, i) => <span key={i} className="pv-hs-tag">{h}</span>)}
                   </div>
@@ -156,7 +162,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
 
               {(day.themes || []).length > 0 && (
                 <div style={{ marginTop: 8 }}>
-                  <strong style={{ fontSize: 11, fontWeight: 800, color: 'var(--gray)' }}>▶ THEMES</strong>
+                  <strong className="pv-section-label">🎯 Themes</strong>
                   <div className="pv-hotspots" style={{ marginTop: 6 }}>
                     {day.themes.map((t, i) => <span key={i} className="pv-theme-tag">{t}</span>)}
                   </div>

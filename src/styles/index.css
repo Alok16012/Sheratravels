@@ -721,6 +721,37 @@ body {
   border-radius: 6px;
 }
 
+.pv-photo-wrap {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.pv-photo-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 8px 6px 4px;
+  text-align: center;
+}
+
+.pv-section-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1d4ed8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: #dbeafe;
+  border-radius: 4px;
+}
+
 .pv-day-desc {
   font-size: 12px;
   line-height: 1.6;

@@ -1,17 +1,65 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBooking, BOOKING_STATUSES } from '../../context/BookingContext'
+import { useCRM } from '../../context/CRMContext'
 import toast from 'react-hot-toast'
+
+function PickLeadModal({ leads, onPick, onClose }) {
+  const [q, setQ] = useState('')
+  const filtered = leads.filter(l => {
+    const s = q.toLowerCase()
+    return !s || l.name?.toLowerCase().includes(s) || l.destination?.toLowerCase().includes(s)
+  })
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="glass-card" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 800 }}>Pick a lead to convert</h3>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ padding: 16 }}>
+          <input className="glass-input" placeholder="Search leads..." value={q} onChange={e => setQ(e.target.value)} />
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+          {filtered.length === 0 ? (
+            <p className="text-dim" style={{ padding: 24, textAlign: 'center' }}>No leads match. Add a lead first.</p>
+          ) : filtered.map(l => (
+            <div
+              key={l.id}
+              onClick={() => onPick(l)}
+              style={{ padding: 12, borderRadius: 10, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border-glass)', marginBottom: 8, background: 'rgba(255,255,255,0.02)' }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{l.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{l.destination || '—'} • {l.phone || 'no phone'}</div>
+              </div>
+              <span style={{ fontSize: 18 }}>→</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
 
 export default function Bookings() {
   const navigate = useNavigate()
   const { bookings, loading, fetchBookings, deleteBooking, getBookingStats } = useBooking()
+  const { leads, fetchLeads } = useCRM()
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [showLeadPicker, setShowLeadPicker] = useState(false)
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
+  useEffect(() => { fetchLeads() }, [fetchLeads])
+
+  const handlePickLead = (lead) => {
+    setShowLeadPicker(false)
+    // Route to leads page with a query so the ConvertBookingModal opens for this lead
+    navigate(`/crm/leads?convert=${lead.id}`)
+  }
 
   const stats = getBookingStats()
   const filteredBookings = bookings.filter(b => {
@@ -28,7 +76,7 @@ export default function Bookings() {
           <h1 className="text-gradient">Bookings & Revenue</h1>
           <p className="text-muted">{bookings.length} reservations</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/crm/leads')}>
+        <button className="btn btn-primary" onClick={() => setShowLeadPicker(true)}>
           + New Booking
         </button>
       </div>
@@ -106,6 +154,14 @@ export default function Bookings() {
           ))
         )}
       </div>
+
+      {showLeadPicker && (
+        <PickLeadModal
+          leads={leads}
+          onPick={handlePickLead}
+          onClose={() => setShowLeadPicker(false)}
+        />
+      )}
 
       <style jsx>{`
         .bookings-header {

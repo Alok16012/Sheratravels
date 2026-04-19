@@ -1,6 +1,104 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useCRM, LEAD_STAGES } from '../../context/CRMContext'
+import { useBooking } from '../../context/BookingContext'
 import toast from 'react-hot-toast'
+
+// Strip everything except digits; prefix with country code if missing
+function cleanPhone(raw) {
+  if (!raw) return ''
+  const digits = String(raw).replace(/\D/g, '')
+  if (!digits) return ''
+  // If 10 digits assume India
+  if (digits.length === 10) return '91' + digits
+  return digits
+}
+
+function ConvertBookingModal({ lead, onSave, onClose }) {
+  const [form, setForm] = useState({
+    total_amount: '',
+    advance_percent: 20,
+    travel_date: lead?.travel_date || '',
+    return_date: lead?.return_date || '',
+    adults: lead?.adults || 1,
+    children: lead?.children || 0,
+    infants: lead?.infants || 0,
+    destination: lead?.destination || '',
+    notes: lead?.notes || '',
+  })
+
+  const submit = () => {
+    if (!form.total_amount || Number(form.total_amount) <= 0) {
+      toast.error('Total amount required')
+      return
+    }
+    onSave({
+      ...form,
+      total_amount: Number(form.total_amount),
+      advance_percent: Number(form.advance_percent),
+      lead_id: lead.id,
+      customer_name: lead.name,
+      customer_email: lead.email || null,
+      customer_phone: lead.phone || null,
+      customer_whatsapp: lead.whatsapp || lead.phone || null,
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass-card animate-fade" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Convert to Booking — {lead.name}</h3>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body-custom">
+          <div className="form-row">
+            <div className="form-field">
+              <label>Total Amount (₹)</label>
+              <input className="glass-input" type="number" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} placeholder="e.g. 50000" />
+            </div>
+            <div className="form-field">
+              <label>Advance %</label>
+              <input className="glass-input" type="number" value={form.advance_percent} onChange={e => setForm({ ...form, advance_percent: e.target.value })} />
+            </div>
+          </div>
+          <div className="form-field">
+            <label>Destination</label>
+            <input className="glass-input" value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} />
+          </div>
+          <div className="form-row">
+            <div className="form-field">
+              <label>Travel Date</label>
+              <input className="glass-input" type="date" value={form.travel_date || ''} onChange={e => setForm({ ...form, travel_date: e.target.value })} />
+            </div>
+            <div className="form-field">
+              <label>Return Date</label>
+              <input className="glass-input" type="date" value={form.return_date || ''} onChange={e => setForm({ ...form, return_date: e.target.value })} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-field">
+              <label>Adults</label>
+              <input className="glass-input" type="number" value={form.adults} onChange={e => setForm({ ...form, adults: Number(e.target.value) })} />
+            </div>
+            <div className="form-field">
+              <label>Children</label>
+              <input className="glass-input" type="number" value={form.children} onChange={e => setForm({ ...form, children: Number(e.target.value) })} />
+            </div>
+            <div className="form-field">
+              <label>Infants</label>
+              <input className="glass-input" type="number" value={form.infants} onChange={e => setForm({ ...form, infants: Number(e.target.value) })} />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer-custom">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={submit}>Create Booking</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const avatarColor = (name = '') => {
   const colors = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9']
@@ -72,12 +170,28 @@ function LeadModal({ lead, onSave, onClose }) {
 
 export default function Leads() {
   const { leads, loading, fetchLeads, addLead, updateLead, deleteLead } = useCRM()
+  const { createBooking } = useBooking()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [showAdd, setShowAdd] = useState(false)
   const [editingLead, setEditingLead] = useState(null)
+  const [convertLead, setConvertLead] = useState(null)
 
   useEffect(() => { fetchLeads() }, [fetchLeads])
+
+  // Auto-open convert modal when ?convert=<leadId> is present (from Bookings page)
+  useEffect(() => {
+    const convertId = searchParams.get('convert')
+    if (!convertId) return
+    const target = leads.find(l => l.id === convertId)
+    if (target) {
+      setConvertLead(target)
+      searchParams.delete('convert')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [leads, searchParams, setSearchParams])
 
   const filteredLeads = leads.filter(l => {
     const q = search.toLowerCase()
@@ -117,7 +231,19 @@ export default function Leads() {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this lead?')) {
       await deleteLead(id)
-      toast.success('Lead removed')
+    }
+  }
+
+  const handleConvert = async (bookingData) => {
+    try {
+      const created = await createBooking(bookingData)
+      if (created) {
+        setConvertLead(null)
+        await fetchLeads()
+        navigate(`/crm/bookings/${created.id}`)
+      }
+    } catch (err) {
+      console.error('Convert error:', err)
     }
   }
 
@@ -180,8 +306,27 @@ export default function Leads() {
                 </span>
               </div>
               <div className="lead-actions">
-                <button className="action-btn" onClick={() => setEditingLead(lead)}>✏️</button>
-                <button className="action-btn delete" onClick={() => handleDelete(lead.id)}>🗑️</button>
+                {lead.phone && (
+                  <a
+                    className="action-btn call"
+                    href={`tel:${lead.phone.replace(/\s/g, '')}`}
+                    title="Call"
+                    onClick={e => e.stopPropagation()}
+                  >📞</a>
+                )}
+                {(lead.whatsapp || lead.phone) && (
+                  <a
+                    className="action-btn whatsapp"
+                    href={`https://wa.me/${cleanPhone(lead.whatsapp || lead.phone)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="WhatsApp"
+                    onClick={e => e.stopPropagation()}
+                  >💬</a>
+                )}
+                <button className="action-btn convert" onClick={() => setConvertLead(lead)} title="Convert to Booking">💼</button>
+                <button className="action-btn" onClick={() => setEditingLead(lead)} title="Edit">✏️</button>
+                <button className="action-btn delete" onClick={() => handleDelete(lead.id)} title="Delete">🗑️</button>
               </div>
             </div>
           ))}
@@ -189,10 +334,18 @@ export default function Leads() {
       </div>
 
       {(showAdd || editingLead) && (
-        <LeadModal 
-          lead={editingLead} 
-          onSave={handleSave} 
-          onClose={() => { setShowAdd(false); setEditingLead(null); }} 
+        <LeadModal
+          lead={editingLead}
+          onSave={handleSave}
+          onClose={() => { setShowAdd(false); setEditingLead(null); }}
+        />
+      )}
+
+      {convertLead && (
+        <ConvertBookingModal
+          lead={convertLead}
+          onSave={handleConvert}
+          onClose={() => setConvertLead(null)}
         />
       )}
 
@@ -358,6 +511,32 @@ export default function Leads() {
         .action-btn.delete:hover {
           background: rgba(239,68,68,0.2);
           border-color: #ef4444;
+        }
+        .action-btn.call {
+          background: rgba(59, 130, 246, 0.12);
+          border-color: rgba(59, 130, 246, 0.4);
+          color: #60a5fa;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .action-btn.whatsapp {
+          background: rgba(37, 211, 102, 0.15);
+          border-color: rgba(37, 211, 102, 0.4);
+          color: #25D366;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .action-btn.convert {
+          background: rgba(245, 158, 11, 0.15);
+          border-color: rgba(245, 158, 11, 0.4);
+          color: #f59e0b;
+        }
+        .action-btn.convert:hover {
+          background: rgba(245, 158, 11, 0.25);
         }
         
         .empty-state {
