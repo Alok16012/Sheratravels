@@ -387,6 +387,7 @@ body {
 /* Mobile visibility helpers — default desktop */
 .mobile-show { display: none; }
 .mobile-hide { display: inline-flex; }
+.mobile-tabs-backdrop { display: none; }
 
 /* ── Editor Standalone Layout ── */
 .editor-layout {

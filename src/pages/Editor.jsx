@@ -130,7 +130,7 @@ export default function Editor() {
           </div>
         </div>
 
-        <div className="editor-workspace animate-fade" style={{ animationDelay: '0.2s' }}>
+        <div className="editor-workspace">
           <div className="editor-main-content">
             <div className="glass-card builder-container">
               <DayBuilder />
