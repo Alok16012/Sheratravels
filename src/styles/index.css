@@ -384,6 +384,10 @@ body {
 
 .icon-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
 
+/* Mobile visibility helpers — default desktop */
+.mobile-show { display: none; }
+.mobile-hide { display: inline-flex; }
+
 /* ── Editor Standalone Layout ── */
 .editor-layout {
   display: flex;
@@ -1955,13 +1959,28 @@ body {
     right: 0;
     top: auto;
     height: auto;
-    max-height: 60vh;
+    max-height: 50px;
     border-radius: 16px 16px 0 0;
-    z-index: 100;
+    z-index: 1001;
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+  }
+
+  .editor-sidebar-tabs.mobile-open {
+    max-height: 80vh;
+  }
+
+  .editor-sidebar-tabs.mobile-open .tabs-content {
+    display: block;
+  }
+
+  .editor-sidebar-tabs:not(.mobile-open) .tabs-content {
+    display: none;
   }
 
   .tabs-header {
-    padding-top: 8px;
+    padding-top: 4px;
+    position: relative;
   }
 
   .sidebar-tab {
@@ -1971,7 +1990,18 @@ body {
 
   .tabs-content {
     padding: 16px;
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
   }
+
+  .mobile-tabs-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+  }
+  .mobile-tabs-backdrop.active { display: block; }
 }
 
 /* Editor Mobile Shared */
@@ -2034,10 +2064,71 @@ body {
   }
 
   .top-bar-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .top-bar-actions .btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .top-bar-actions .btn span:not(:first-child) {
     display: none;
   }
 
   .editor-workspace {
     grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding-bottom: 70px;
+  }
+
+  .editor-main {
+    padding: 14px !important;
+  }
+
+  .editor-main-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px !important;
+  }
+  .editor-main-header h2 {
+    font-size: 15px !important;
+  }
+  .editor-main-header .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .day-header {
+    padding: 12px 14px !important;
+  }
+  .day-header-left {
+    gap: 10px !important;
+    flex: 1;
+    min-width: 0;
+  }
+  .day-title-input {
+    width: 100% !important;
+    min-width: 0;
+    font-size: 13px !important;
+  }
+  .day-num {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .day-header-actions {
+    gap: 6px !important;
+  }
+  .day-body {
+    padding: 14px !important;
+  }
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .builder-container {
+    min-height: auto !important;
   }
 }

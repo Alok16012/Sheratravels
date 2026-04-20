@@ -20,6 +20,7 @@ export default function Editor() {
   const [activeTab, setActiveTab] = useState('info')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [tabsSheetOpen, setTabsSheetOpen] = useState(false)
   const saveRef = useRef(null)
 
   useEffect(() => {
@@ -136,18 +137,29 @@ export default function Editor() {
             </div>
           </div>
 
-          <aside className="editor-sidebar-tabs glass-card">
+          <div className={`mobile-tabs-backdrop ${tabsSheetOpen ? 'active' : ''}`} onClick={() => setTabsSheetOpen(false)} />
+          <aside className={`editor-sidebar-tabs glass-card ${tabsSheetOpen ? 'mobile-open' : ''}`}>
             <div className="tabs-header">
               {tabs.map(t => (
                 <button
                   key={t.id}
                   className={`sidebar-tab ${activeTab === t.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(t.id)}
+                  onClick={() => {
+                    setActiveTab(t.id)
+                    setTabsSheetOpen(true)
+                  }}
                 >
                   <span className="icon">{t.icon}</span>
                   <span className="label">{t.label}</span>
                 </button>
               ))}
+              <button
+                className="sidebar-tab mobile-show mobile-sheet-toggle"
+                onClick={() => setTabsSheetOpen(o => !o)}
+                aria-label="Toggle details panel"
+              >
+                <span className="icon">{tabsSheetOpen ? '▾' : '▴'}</span>
+              </button>
             </div>
 
             <div className="tabs-content">
