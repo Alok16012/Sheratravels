@@ -1719,6 +1719,304 @@ body {
   color: var(--primary);
 }
 
+/* ── Pricing Tab (new design) ── */
+.price-quick-add {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+.price-quick-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+}
+
+.price-quick-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.price-quick-btn {
+  padding: 8px 14px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--text-bright);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.price-quick-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.price-quick-btn.exists,
+.price-quick-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: rgba(255,255,255,0.03);
+  border-color: var(--border-glass);
+}
+
+.price-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.price-empty {
+  text-align: center;
+  padding: 32px 16px;
+  border: 2px dashed var(--border-glass);
+  border-radius: 12px;
+  color: var(--text-dim);
+}
+.price-empty > span { font-size: 32px; display: block; margin-bottom: 8px; }
+.price-empty p { font-size: 12px; margin: 2px 0; }
+
+.price-row-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 14px 14px 14px 42px;
+  transition: var(--transition);
+}
+
+.price-row-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.price-row-number {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
+}
+
+.price-row-fields {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1.2fr;
+  gap: 10px;
+}
+
+.price-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.price-row-field label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.price-row-field .glass-input {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.price-inr-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.price-inr-input .glass-input {
+  padding-left: 24px;
+  width: 100%;
+}
+.price-inr-symbol {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  pointer-events: none;
+  z-index: 1;
+}
+.price-inr-formatted {
+  position: absolute;
+  right: 10px;
+  top: -8px;
+  background: var(--bg-dark);
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #10b981;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.price-row-del {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.price-row-del:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  transform: scale(1.1);
+}
+
+.price-add-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px dashed rgba(99, 102, 241, 0.4);
+  border-radius: 12px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 18px;
+}
+.price-add-btn:hover {
+  background: rgba(99, 102, 241, 0.16);
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.price-summary-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.price-summary-head {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--text-bright);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.price-summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.price-summary-type {
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.price-summary-age {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.price-summary-val {
+  font-weight: 800;
+  color: #10b981;
+  font-size: 13px;
+}
+
+.price-summary-min {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(16, 185, 129, 0.3);
+}
+.price-summary-min > span:first-child {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.price-min-val {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: #fbbf24 !important;
+}
+
+.section-head {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 8px 0 14px;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .price-row-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .price-row-card {
+    padding: 14px 14px 14px 40px;
+  }
+  .price-quick-btn {
+    font-size: 11px;
+    padding: 7px 12px;
+  }
+}
+
 /* ── TC Editor ── */
 .tc-field {
   margin-bottom: 24px;
