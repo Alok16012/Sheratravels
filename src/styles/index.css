@@ -1952,14 +1952,17 @@ body {
     padding: 6px 12px;
     font-size: 12px;
   }
+}
 
+/* Editor Mobile Shared */
+@media (max-width: 768px) {
   .editor-sidebar-tabs {
     position: fixed !important;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    height: auto;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    height: auto !important;
     max-height: 72px;
     border-radius: 18px 18px 0 0;
     z-index: 1001;
@@ -2023,7 +2026,6 @@ body {
   }
 
   .mobile-tabs-backdrop {
-    display: none;
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.55);
