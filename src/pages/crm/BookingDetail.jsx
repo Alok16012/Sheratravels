@@ -39,7 +39,7 @@ export default function BookingDetail() {
           This booking doesn't exist on this device. It may have been created in another browser
           or removed.
         </p>
-        <button className="btn btn-primary" onClick={() => navigate('/crm/bookings')}>
+        <button className="btn btn-primary" onClick={() => navigate('/bookings')}>
           ← Back to Bookings
         </button>
       </div>
@@ -55,7 +55,7 @@ export default function BookingDetail() {
     <div className="booking-detail-page page-content">
       <div className="detail-header animate-fade">
         <div className="header-left">
-          <button className="icon-btn back-btn" onClick={() => navigate('/crm/bookings')}>←</button>
+          <button className="icon-btn back-btn" onClick={() => navigate('/bookings')}>←</button>
           <div className="title-block">
             <h2 className="text-gradient">{booking?.booking_ref}</h2>
             <p className="text-dim">{booking?.customer_name} • {booking?.destination || 'Trip'}</p>
@@ -186,12 +186,17 @@ export default function BookingDetail() {
             <div className="share-view">
               <p className="text-dim">Share this link with the guest to let them view their itinerary and make payments.</p>
               <div className="link-box">
-                <input className="glass-input" readOnly value={`${window.location.origin}/booking/form/${booking?.booking_token}`} />
+                <input className="glass-input" readOnly value={`${window.location.origin}/crm/booking/form/${booking?.booking_token}`} />
                 <button className="btn btn-primary" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/booking/form/${booking?.booking_token}`)
+                  navigator.clipboard.writeText(`${window.location.origin}/crm/booking/form/${booking?.booking_token}`)
                   toast.success('Link copied!')
                 }}>Copy Link</button>
               </div>
+              {!booking?.booking_token && (
+                <p style={{ color: '#ef4444', fontSize: 13, marginTop: 12 }}>
+                  ⚠️ Booking token missing. Please re-save the booking or contact support.
+                </p>
+              )}
             </div>
           )}
         </div>
