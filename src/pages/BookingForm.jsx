@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useBooking } from '../context/BookingContext'
 import { openRazorpayCheckout, isRazorpayConfigured } from '../lib/razorpay'
-import { sendInvoiceEmail, isEmailConfigured } from '../lib/email'
+import { sendReceiptEmail, printReceipt, isEmailConfigured } from '../lib/email'
 import toast from 'react-hot-toast'
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -19,6 +19,7 @@ export default function BookingForm() {
   const [notFound, setNotFound]   = useState(false)
   const [step, setStep]           = useState('form')   // 'form' | 'summary' | 'paid'
   const [paying, setPaying]       = useState(false)
+  const [receiptData, setReceiptData] = useState(null) // { justPaid, newPaidTotal, newBalance }
 
   const [form, setForm] = useState({
     customer_name: '', customer_email: '', customer_phone: '', customer_whatsapp: '',
@@ -81,7 +82,25 @@ export default function BookingForm() {
         razorpay_payment_id: response.razorpay_payment_id,
         razorpay_order_id:   response.razorpay_order_id,
       })
+
+      // Calculate receipt data
+      const prevPaid    = Number(booking.paid_amount || 0)
+      const newPaidTotal = prevPaid + advanceAmt
+      const newBalance   = Math.max(0, Number(booking.total_amount || 0) - newPaidTotal)
+      const rd = { justPaid: advanceAmt, newPaidTotal, newBalance }
+      setReceiptData(rd)
+
+      // Update local booking state so receipt shows correct numbers
+      setBooking(prev => ({ ...prev, paid_amount: newPaidTotal }))
+
       setStep('paid')
+
+      // Auto-send receipt email
+      if (isEmailConfigured && booking.customer_email) {
+        sendReceiptEmail(booking, advanceAmt, newPaidTotal, newBalance)
+          .then(() => toast.success('Receipt email sent!'))
+          .catch(() => {}) // silent fail — print is always available
+      }
     } catch (err) {
       if (err.message !== 'Payment cancelled by user') toast.error(err.message)
     }
@@ -168,14 +187,45 @@ export default function BookingForm() {
           </div>
         )}
 
-        {step === 'paid' && (
+        {step === 'paid' && receiptData && (
           <div className="success-scene animate-in">
              <div className="glass-card success-card">
                 <div className="check-icon">✓</div>
-                <h2>Booking Confirmed!</h2>
-                <p>We've received your advance payment of <strong>{fmt(advanceAmt)}</strong>.</p>
+                <h2>Payment Received!</h2>
                 <div className="ref-number">{booking.booking_ref}</div>
-                <p className="text-muted">A confirmation email has been sent to {form.customer_email}</p>
+
+                <div className="receipt-box">
+                  <div className="receipt-row">
+                    <span>Total Package</span>
+                    <span>{fmt(totalAmt)}</span>
+                  </div>
+                  <div className="receipt-row receipt-paid-now">
+                    <span>✅ Paid Now</span>
+                    <strong>{fmt(receiptData.justPaid)}</strong>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Total Paid</span>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>{fmt(receiptData.newPaidTotal)}</span>
+                  </div>
+                  <div className="receipt-row receipt-balance">
+                    <span>{receiptData.newBalance <= 0 ? '🎉 Fully Paid' : '⏳ Balance Due'}</span>
+                    <strong>{fmt(receiptData.newBalance)}</strong>
+                  </div>
+                </div>
+
+                {form.customer_email && (
+                  <p style={{ fontSize: 13, opacity: 0.7, margin: '12px 0 0' }}>
+                    Receipt sent to {form.customer_email}
+                  </p>
+                )}
+
+                <button
+                  className="btn btn-primary full-btn"
+                  style={{ marginTop: 20 }}
+                  onClick={() => printReceipt(booking, receiptData.justPaid, receiptData.newPaidTotal, receiptData.newBalance)}
+                >
+                  🖨️ Print / Download Receipt
+                </button>
              </div>
           </div>
         )}
@@ -225,9 +275,13 @@ export default function BookingForm() {
         .sum-row { display: flex; justify-content: space-between; font-size: 15px; }
         .sum-row.highlight { color: #10b981; font-weight: 800; font-size: 18px; padding: 12px 0; border-top: 1px solid var(--border-glass); border-bottom: 1px solid var(--border-glass); }
 
-        .success-card { padding: 60px 40px; text-align: center; }
+        .success-card { padding: 40px; text-align: center; }
         .check-icon { width: 80px; height: 80px; background: #10b981; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .ref-number { background: rgba(255,255,255,0.05); padding: 12px 24px; border-radius: 12px; font-family: var(--mono); font-weight: 800; font-size: 20px; margin: 24px 0; color: var(--primary); }
+        .ref-number { background: rgba(255,255,255,0.05); padding: 10px 20px; border-radius: 12px; font-family: var(--mono); font-weight: 800; font-size: 18px; margin: 16px 0; color: var(--primary); }
+        .receipt-box { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 16px 20px; margin: 16px 0 0; text-align: left; display: flex; flex-direction: column; gap: 10px; }
+        .receipt-row { display: flex; justify-content: space-between; font-size: 14px; color: rgba(255,255,255,0.75); }
+        .receipt-paid-now { background: rgba(16,185,129,0.15); padding: 8px 12px; border-radius: 8px; font-size: 15px; color: #10b981; }
+        .receipt-balance { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; font-size: 15px; color: #f59e0b; }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pop { from { scale: 0.5; opacity: 0; } to { scale: 1; opacity: 1; } }

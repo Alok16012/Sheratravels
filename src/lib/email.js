@@ -167,6 +167,128 @@ function itineraryHTML(booking, pkg, days = [], prices = []) {
 </div></body></html>`
 }
 
+// ── Payment Receipt HTML (customer ke liye — ek payment ka) ──
+function receiptHTML(booking, justPaid, newPaidTotal, newBalance) {
+  const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
+  const isFullyPaid = newBalance <= 0
+  const now = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Payment Receipt — ${booking.booking_ref}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, Arial, sans-serif; background: #F1F5F9; color: #0F172A; padding: 20px; }
+    .wrap { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg,#4F6EF7,#6366F1); padding: 32px; color: #fff; text-align: center; }
+    .header h1 { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+    .header p  { opacity: 0.85; font-size: 14px; }
+    .check { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 16px; }
+    .section { padding: 24px 32px; border-bottom: 1px solid #E2E8F0; }
+    .section:last-of-type { border-bottom: none; }
+    .sec-title { font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .row .label { color: #64748B; }
+    .row .val { font-weight: 700; }
+    .amount-box { background: #F8FAFC; border-radius: 12px; padding: 16px 20px; }
+    .a-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E2E8F0; font-size: 14px; }
+    .a-row:last-child { border-bottom: none; padding-top: 12px; }
+    .paid-now { color: #10B981; font-weight: 800; font-size: 20px; }
+    .balance   { color: #F59E0B; font-weight: 800; font-size: 18px; }
+    .fully-paid { color: #059669; font-weight: 800; font-size: 18px; }
+    .badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 800; margin-top: 12px; }
+    .badge-due  { background: #FEF3C7; color: #D97706; }
+    .badge-paid { background: #D1FAE5; color: #059669; }
+    .ref-box { background: #EEF2FF; border-radius: 10px; padding: 12px 20px; text-align: center; margin-top: 16px; }
+    .ref-num { font-size: 18px; font-weight: 900; color: #4F6EF7; letter-spacing: 1px; }
+    .footer { background: #F8FAFC; padding: 20px 32px; text-align: center; font-size: 12px; color: #94A3B8; }
+    @media print {
+      body { background: white; padding: 0; }
+      .wrap { box-shadow: none; border-radius: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="check">✓</div>
+    <h1>Payment Received!</h1>
+    <p>${now}</p>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Dear ${booking.customer_name || 'Traveller'},</div>
+    <p style="font-size:14px;color:#334155;line-height:1.7">
+      Thank you for your payment! Here is your receipt for the booking with <strong>Shera Travels</strong>.
+    </p>
+    <div class="ref-box">
+      <div style="font-size:11px;font-weight:700;color:#6366F1;margin-bottom:4px">BOOKING REFERENCE</div>
+      <div class="ref-num">${booking.booking_ref || '—'}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Trip Details</div>
+    <div class="row"><span class="label">Destination</span><span class="val">${booking.destination || '—'}</span></div>
+    <div class="row"><span class="label">Travel Date</span><span class="val">${booking.travel_date ? new Date(booking.travel_date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}) : '—'}</span></div>
+    <div class="row"><span class="label">Passengers</span><span class="val">${booking.adults||0} Adults${booking.children ? `, ${booking.children} Children` : ''}${booking.infants ? `, ${booking.infants} Infants` : ''}</span></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Payment Summary</div>
+    <div class="amount-box">
+      <div class="a-row"><span>Total Package Amount</span><span style="font-weight:700">${fmt(booking.total_amount)}</span></div>
+      <div class="a-row" style="background:#F0FDF4;margin:0 -4px;padding:8px 4px;border-radius:6px">
+        <span style="font-weight:700">✅ Amount Paid (This Payment)</span>
+        <span class="paid-now">${fmt(justPaid)}</span>
+      </div>
+      <div class="a-row"><span>Total Paid So Far</span><span style="font-weight:700;color:#10B981">${fmt(newPaidTotal)}</span></div>
+      <div class="a-row">
+        <span style="font-weight:800">${isFullyPaid ? '🎉 Fully Paid' : '⏳ Balance Remaining'}</span>
+        <span class="${isFullyPaid ? 'fully-paid' : 'balance'}">${fmt(newBalance)}</span>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <span class="badge ${isFullyPaid ? 'badge-paid' : 'badge-due'}">
+        ${isFullyPaid ? '✅ Trip Fully Confirmed!' : `⏳ Balance Due at Check-in: ${fmt(newBalance)}`}
+      </span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>Shera Travels</strong><br/>
+    ${booking.company_addr || 'Radio Colony, Srinagar, Lawaypora, Srinagar, J&K 190017'}<br/>
+    📞 ${booking.company_phone || '+91-9149406965'} &nbsp;|&nbsp; ✉ ${booking.company_email || 'sheratravels21@gmail.com'}<br/><br/>
+    <em>Please save this receipt for your records. Thank you for choosing Shera Travels! ✈️</em>
+  </div>
+</div>
+</body>
+</html>`
+}
+
+// ── Print Invoice in new window ────────────────────────────
+export function printInvoice(booking, payments = []) {
+  const html = invoiceHTML(booking, payments)
+  const win = window.open('', '_blank', 'width=700,height=900')
+  win.document.write(html)
+  win.document.close()
+  setTimeout(() => { win.focus(); win.print() }, 500)
+}
+
+// ── Print Receipt in new window ───────────────────────────
+export function printReceipt(booking, justPaid, newPaidTotal, newBalance) {
+  const html = receiptHTML(booking, justPaid, newPaidTotal, newBalance)
+  const win = window.open('', '_blank', 'width=700,height=900')
+  win.document.write(html)
+  win.document.close()
+  setTimeout(() => { win.focus(); win.print() }, 500)
+}
+
 // ── Public API ─────────────────────────────────────────────
 export async function sendInvoiceEmail(booking, payments = []) {
   if (!booking.customer_email) throw new Error('Customer email nahi hai.')
@@ -174,6 +296,15 @@ export async function sendInvoiceEmail(booking, payments = []) {
     to:      booking.customer_email,
     subject: `Booking Confirmed — ${booking.booking_ref} | Shera Travels`,
     html:    invoiceHTML(booking, payments),
+  })
+}
+
+export async function sendReceiptEmail(booking, justPaid, newPaidTotal, newBalance) {
+  if (!booking.customer_email) throw new Error('Customer email nahi hai.')
+  return sendEmail({
+    to:      booking.customer_email,
+    subject: `Payment Receipt — ${booking.booking_ref} | Shera Travels`,
+    html:    receiptHTML(booking, justPaid, newPaidTotal, newBalance),
   })
 }
 

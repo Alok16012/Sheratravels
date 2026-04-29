@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBooking, BOOKING_STATUSES } from '../../context/BookingContext'
 import { supabase } from '../../lib/supabase'
+import { sendInvoiceEmail, sendReceiptEmail, printInvoice, printReceipt, isEmailConfigured } from '../../lib/email'
 import toast from 'react-hot-toast'
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -132,22 +133,61 @@ export default function BookingDetail() {
 
           {activeTab === 'payments' && (
             <div className="payments-view">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+                <h4 style={{ fontSize: 14, fontWeight: 800 }}>Payment History</h4>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}
+                    onClick={() => printInvoice(booking, payments)}>
+                    🖨️ Print Invoice
+                  </button>
+                  {isEmailConfigured && booking?.customer_email && (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}
+                      onClick={async () => {
+                        try {
+                          await sendInvoiceEmail(booking, payments)
+                          toast.success(`Invoice sent to ${booking.customer_email}`)
+                        } catch (e) {
+                          toast.error(e.message)
+                        }
+                      }}>
+                      📧 Email Invoice
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <table className="modern-table">
                 <thead>
-                  <tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr>
+                  <tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th><th>Receipt</th></tr>
                 </thead>
                 <tbody>
-                  {payments.map(p => (
-                    <tr key={p.id}>
-                      <td>{new Date(p.created_at).toLocaleDateString()}</td>
-                      <td>{fmt(p.amount)}</td>
-                      <td>{p.method}</td>
-                      <td><span className="badge-mini">Success</span></td>
-                    </tr>
-                  ))}
+                  {payments.map(p => {
+                    const paidSoFar = payments
+                      .filter(x => new Date(x.created_at) <= new Date(p.created_at))
+                      .reduce((s, x) => s + Number(x.amount || 0), 0)
+                    const balAfter = Math.max(0, Number(booking?.total_amount || 0) - paidSoFar)
+                    return (
+                      <tr key={p.id}>
+                        <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                        <td>{fmt(p.amount)}</td>
+                        <td style={{ textTransform: 'capitalize' }}>{p.method}</td>
+                        <td><span className="badge-mini">Success</span></td>
+                        <td>
+                          <button
+                            style={{ background: 'none', border: '1px solid var(--border-glass)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text-dim)', cursor: 'pointer' }}
+                            onClick={() => printReceipt(booking, Number(p.amount), paidSoFar, balAfter)}
+                            title="Print receipt for this payment"
+                          >🖨️</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {payments.length === 0 && (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>No payments recorded</td></tr>
+                  )}
                 </tbody>
               </table>
-              <button className="btn btn-primary" style={{ marginTop: '24px' }} onClick={() => setShowPaymentModal(true)}>Record Manual Payment</button>
+              <button className="btn btn-primary" style={{ marginTop: '24px' }} onClick={() => setShowPaymentModal(true)}>+ Record Manual Payment</button>
             </div>
           )}
 
@@ -172,10 +212,28 @@ export default function BookingDetail() {
                   <button className="btn btn-ghost" onClick={() => setShowPaymentModal(false)}>Cancel</button>
                   <button className="btn btn-primary" onClick={async () => {
                     if (!paymentAmount) return toast.error('Enter amount')
-                    await recordPayment(booking.id, { amount: Number(paymentAmount), method: paymentMethod, type: 'advance', status: 'success' })
+                    const amt = Number(paymentAmount)
+                    await recordPayment(booking.id, { amount: amt, method: paymentMethod, type: 'advance', status: 'success' })
+
+                    // Calculate receipt values for this payment
+                    const prevPaid    = Number(booking.paid_amount || 0)
+                    const newPaidTotal = prevPaid + amt
+                    const newBalance   = Math.max(0, Number(booking.total_amount || 0) - newPaidTotal)
+
                     setPaymentAmount('')
                     setShowPaymentModal(false)
                     toast.success('Payment recorded!')
+
+                    // Auto-print receipt + optionally email
+                    const updatedBooking = { ...booking, paid_amount: newPaidTotal }
+                    if (isEmailConfigured && booking.customer_email) {
+                      sendReceiptEmail(updatedBooking, amt, newPaidTotal, newBalance)
+                        .then(() => toast.success(`Receipt emailed to ${booking.customer_email}`))
+                        .catch(() => {})
+                    }
+                    if (window.confirm('Print receipt for this payment?')) {
+                      printReceipt(updatedBooking, amt, newPaidTotal, newBalance)
+                    }
                   }}>Save Payment</button>
                 </div>
               </div>
