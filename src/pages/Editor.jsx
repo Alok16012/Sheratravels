@@ -7,7 +7,6 @@ import InfoTab from '../components/tabs/InfoTab'
 import PhotosTab from '../components/tabs/PhotosTab'
 import PricingTab from '../components/tabs/PricingTab'
 import TCTab from '../components/tabs/TCTab'
-import LocationsTab from '../components/tabs/LocationsTab'
 import toast from 'react-hot-toast'
 
 export default function Editor() {
@@ -63,11 +62,10 @@ export default function Editor() {
   }
 
   const tabs = [
-    { id: 'info',      label: 'Basics',     icon: '📝' },
-    { id: 'photos',    label: 'Media',      icon: '🖼️' },
-    { id: 'pricing',   label: 'Rates',      icon: '💰' },
-    { id: 'tc',        label: 'T&C',        icon: '📄' },
-    { id: 'locations', label: 'Locations',  icon: '📍' },
+    { id: 'info', label: 'Basics', icon: '📝' },
+    { id: 'photos', label: 'Media', icon: '🖼️' },
+    { id: 'pricing', label: 'Rates', icon: '💰' },
+    { id: 'tc', label: 'T&C', icon: '📄' },
   ]
 
   const navItems = [
@@ -165,11 +163,10 @@ export default function Editor() {
             </div>
 
             <div className="tabs-content">
-              {activeTab === 'info'      && <InfoTab active />}
-              {activeTab === 'photos'    && <PhotosTab active />}
-              {activeTab === 'pricing'   && <PricingTab active />}
-              {activeTab === 'tc'        && <TCTab active />}
-              {activeTab === 'locations' && <LocationsTab active />}
+              {activeTab === 'info' && <InfoTab active />}
+              {activeTab === 'photos' && <PhotosTab active />}
+              {activeTab === 'pricing' && <PricingTab active />}
+              {activeTab === 'tc' && <TCTab active />}
             </div>
           </aside>
         </div>
