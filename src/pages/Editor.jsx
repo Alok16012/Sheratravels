@@ -23,6 +23,14 @@ export default function Editor() {
   const [tabsSheetOpen, setTabsSheetOpen] = useState(false)
   const saveRef = useRef(null)
 
+  // Always keep latest data in refs so we can save on unmount
+  const pkgRef    = useRef(pkg)
+  const pricesRef = useRef(prices)
+  const daysRef   = useRef(days)
+  useEffect(() => { pkgRef.current    = pkg    }, [pkg])
+  useEffect(() => { pricesRef.current = prices }, [prices])
+  useEffect(() => { daysRef.current   = days   }, [days])
+
   useEffect(() => {
     if (id) {
       loadPackage(id)
@@ -30,12 +38,26 @@ export default function Editor() {
     }
   }, [id])
 
+  // Auto-save debounced (800ms — fast enough to beat mobile navigation)
   useEffect(() => {
     if (!pkg?.id) return
     clearTimeout(saveRef.current)
-    saveRef.current = setTimeout(() => saveAll(pkg, prices, days), 1500)
+    saveRef.current = setTimeout(() => saveAll(pkg, prices, days), 800)
     return () => clearTimeout(saveRef.current)
   }, [pkg, prices, days])
+
+  // Save immediately on unmount — prevents data loss when user navigates away
+  useEffect(() => {
+    return () => {
+      const p  = pkgRef.current
+      const pr = pricesRef.current
+      const d  = daysRef.current
+      if (p?.id) {
+        clearTimeout(saveRef.current)
+        saveAll(p, pr, d)
+      }
+    }
+  }, [saveAll])
 
   if (loading && !pkg) {
     return <div className="loading-state"><div className="spinner" /></div>
@@ -121,11 +143,21 @@ export default function Editor() {
           </div>
 
           <div className="top-bar-actions">
+            <button
+              className="btn btn-ghost mobile-save-btn"
+              onClick={() => {
+                clearTimeout(saveRef.current)
+                saveAll(pkg, prices, days).then(() => toast.success('Saved!'))
+              }}
+              title="Save now"
+            >
+              <span>💾</span><span className="mobile-save-label"> Save</span>
+            </button>
             <button className="btn btn-ghost" onClick={() => setPreviewOpen(true)}>
-              <span>👁️</span> Preview
+              <span>👁️</span><span className="desktop-only"> Preview</span>
             </button>
             <button className="btn btn-primary" onClick={handlePrint}>
-              <span>🖨️</span> Export PDF
+              <span>🖨️</span><span className="desktop-only"> Export PDF</span>
             </button>
           </div>
         </div>
