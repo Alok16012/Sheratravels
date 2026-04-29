@@ -23,6 +23,7 @@ const DEFAULT_PACKAGE = {
   company_email: 'sheratravels21@gmail.com',
   company_phone: '+91-9149406965, 9858966518',
   company_gst: '01KODPS7232P1ZE',
+  locations: [],
 }
 
 const initialState = {
