@@ -48,7 +48,7 @@ export default function Admin() {
       saveCredentials(sbUrl.trim(), sbKey.trim())
       setConnected(true)
       toast.success('Connected! Reloading app...')
-      setTimeout(() => { window.location.href = '/' }, 1500)
+      setTimeout(() => { window.location.href = '/crm' }, 1500)
     } catch (e) {
       toast.error('Connection fail: ' + (e.message || 'Check credentials'))
       setConnected(false)

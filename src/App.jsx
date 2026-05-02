@@ -37,7 +37,7 @@ const StandaloneRoute = ({ children }) => {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/crm">
       <PackageProvider>
         <CRMProvider>
           <BookingProvider>
@@ -50,13 +50,10 @@ export default function App() {
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/editor/:id" element={<StandaloneRoute><Editor /></StandaloneRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              
-              <Route path="/crm/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-              <Route path="/crm/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-              <Route path="/crm/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
-              
-              {/* Redirect /crm to home dashboard */}
-              <Route path="/crm" element={<Navigate to="/" replace />} />
+
+              <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+              <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+              <Route path="/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
             </Routes>
 
             <Toaster

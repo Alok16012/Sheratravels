@@ -3,9 +3,9 @@ import { useCRM } from '../../context/CRMContext'
 
 const NAV_LINKS = [
   { path: '/crm',           label: 'Dashboard', icon: '📊' },
-  { path: '/crm/leads',     label: 'Leads',     icon: '👥', showCount: true },
-  { path: '/crm/bookings',  label: 'Bookings',  icon: '🎫' },
-  { path: '/crm/payments',  label: 'Payments',  icon: '💳', soon: true },
+  { path: '/leads',     label: 'Leads',     icon: '👥', showCount: true },
+  { path: '/bookings',  label: 'Bookings',  icon: '🎫' },
+  { path: '/payments',  label: 'Payments',  icon: '💳', soon: true },
 ]
 
 export default function CRMLayout({ children }) {

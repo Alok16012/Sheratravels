@@ -63,12 +63,27 @@ export function CRMProvider({ children }) {
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
 
+  // Sanitize form data before sending to Supabase —
+  // empty strings break date/int/numeric columns
+  const sanitizeLead = (data) => ({
+    ...data,
+    travel_date:  data.travel_date  || null,
+    return_date:  data.return_date  || null,
+    adults:       Number(data.adults)   || 1,
+    children:     Number(data.children) || 0,
+    infants:      Number(data.infants)  || 0,
+    budget_min:   data.budget_min ? Number(data.budget_min) : null,
+    budget_max:   data.budget_max ? Number(data.budget_max) : null,
+    email:        data.email  || null,
+    whatsapp:     data.whatsapp || null,
+  })
+
   const addLead = useCallback(async (formData) => {
     if (!isConfigured) { warnUnconfigured(); return null }
     dispatch({ type: 'SET_SAVING', payload: true })
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
     const lead = {
-      ...formData,
+      ...sanitizeLead(formData),
       id: crypto.randomUUID(),
       stage,
       created_at: new Date().toISOString(),
@@ -79,7 +94,7 @@ export function CRMProvider({ children }) {
       if (error) throw error
       const saved = data || lead
       dispatch({ type: 'ADD_LEAD', payload: saved })
-      toast.success('Lead saved to Supabase!')
+      toast.success('Lead saved!')
       return saved
     } catch (err) {
       console.error('addLead error:', err)
@@ -92,7 +107,7 @@ export function CRMProvider({ children }) {
 
   const updateLead = useCallback(async (id, changes) => {
     if (!isConfigured) { warnUnconfigured(); return null }
-    const updated = { ...changes, updated_at: new Date().toISOString() }
+    const updated = { ...sanitizeLead(changes), updated_at: new Date().toISOString() }
     try {
       const { data, error } = await supabase.from('leads').update(updated).eq('id', id).select().single()
       if (error) throw error

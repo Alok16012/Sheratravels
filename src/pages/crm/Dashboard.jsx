@@ -109,7 +109,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="crm-page-actions">
-          <button className="crm-btn crm-btn-primary" onClick={() => navigate('/crm/leads')}>
+          <button className="crm-btn crm-btn-primary" onClick={() => navigate('/leads')}>
             + New Lead
           </button>
         </div>
@@ -193,7 +193,7 @@ export default function Dashboard() {
                 <div
                   key={stage.id}
                   className="crm-pipeline-row"
-                  onClick={() => navigate(`/crm/leads?stage=${stage.id}`)}
+                  onClick={() => navigate(`/leads?stage=${stage.id}`)}
                 >
                   <div className="crm-pipeline-dot" style={{ background: stage.color }} />
                   <div className="crm-pipeline-stage">
@@ -219,7 +219,7 @@ export default function Dashboard() {
           <div className="crm-table-card">
             <div className="crm-table-head">
               <div className="crm-table-title">Recent Leads</div>
-              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => navigate('/crm/leads')}>
+              <button className="crm-btn crm-btn-ghost crm-btn-sm" onClick={() => navigate('/leads')}>
                 View All →
               </button>
             </div>
@@ -232,7 +232,7 @@ export default function Dashboard() {
                 <button
                   className="crm-btn crm-btn-primary"
                   style={{ marginTop: 14 }}
-                  onClick={() => navigate('/crm/leads')}
+                  onClick={() => navigate('/leads')}
                 >
                   + Add First Lead
                 </button>
@@ -321,7 +321,7 @@ export default function Dashboard() {
                             )}
                             <button
                               className="crm-action-btn crm-action-view"
-                              onClick={() => navigate(`/crm/leads?highlight=${lead.id}`)}
+                              onClick={() => navigate(`/leads?highlight=${lead.id}`)}
                               title="View"
                             >👁</button>
                           </div>

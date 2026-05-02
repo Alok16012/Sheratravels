@@ -58,7 +58,7 @@ export default function Bookings() {
   const handlePickLead = (lead) => {
     setShowLeadPicker(false)
     // Route to leads page with a query so the ConvertBookingModal opens for this lead
-    navigate(`/crm/leads?convert=${lead.id}`)
+    navigate(`/leads?convert=${lead.id}`)
   }
 
   const stats = getBookingStats()
@@ -132,7 +132,7 @@ export default function Bookings() {
           </div>
         ) : (
           filteredBookings.map(b => (
-            <div key={b.id} className="booking-item" onClick={() => navigate(`/crm/bookings/${b.id}`)}>
+            <div key={b.id} className="booking-item" onClick={() => navigate(`/bookings/${b.id}`)}>
               <div className="booking-ref">
                 <span className="ref-badge">{b.booking_ref}</span>
               </div>

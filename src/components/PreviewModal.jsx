@@ -1,5 +1,78 @@
+import { useState } from 'react'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
+import toast from 'react-hot-toast'
+import logoUrl from '../../public/logo.png'
+
 export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days }) {
+  const [sharing, setSharing] = useState(false)
+
   if (!open) return null
+
+  const sharePdfOnWhatsApp = async () => {
+    setSharing(true)
+    const toastId = toast.loading('Generating PDF...')
+    try {
+      const el = document.getElementById('preview-doc')
+
+      const canvas = await html2canvas(el, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 2,
+        logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        onclone: (doc) => {
+          // Make sure cloned doc renders at full height
+          doc.getElementById('preview-doc').style.maxHeight = 'none'
+        },
+      })
+
+      const pdf     = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pageW   = pdf.internal.pageSize.getWidth()
+      const pageH   = pdf.internal.pageSize.getHeight()
+      const imgW    = pageW
+      const imgH    = (canvas.height * pageW) / canvas.width
+      const imgData = canvas.toDataURL('image/jpeg', 0.92)
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH)
+      let remaining = imgH - pageH
+      let page = 1
+      while (remaining > 0) {
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, -(page * pageH), imgW, imgH)
+        remaining -= pageH
+        page++
+      }
+
+      const blob     = pdf.output('blob')
+      const filename = `${pkg?.title || 'Itinerary'}.pdf`
+      const file     = new File([blob], filename, { type: 'application/pdf' })
+
+      toast.dismiss(toastId)
+
+      // Mobile: Web Share API → native share sheet includes WhatsApp
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: filename, files: [file] })
+        toast.success('Shared!')
+      } else {
+        // Desktop: download PDF + open WhatsApp so user can attach it
+        const url = URL.createObjectURL(blob)
+        const a   = document.createElement('a')
+        a.href = url; a.download = filename; a.click()
+        URL.revokeObjectURL(url)
+        toast.success('PDF downloaded! Open WhatsApp → attach the file.', { duration: 5000 })
+      }
+    } catch (err) {
+      toast.dismiss(toastId)
+      if (err.name !== 'AbortError') {
+        toast.error('Could not generate PDF. Try Print → Save as PDF instead.')
+        console.error('PDF share error:', err)
+      }
+    } finally {
+      setSharing(false)
+    }
+  }
 
   days = days?.map(d => ({
     ...d,
@@ -36,6 +109,13 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
     <div className="preview-overlay open">
       <div className="preview-close-bar">
         <button className="close-preview-btn" onClick={onPrint}>🖨️ Print / Save PDF</button>
+        <button
+          className="close-preview-btn"
+          onClick={sharePdfOnWhatsApp}
+          disabled={sharing}
+          style={{ background: 'rgba(37,211,102,0.15)', borderColor: 'rgba(37,211,102,0.4)', color: '#25D366', opacity: sharing ? 0.6 : 1 }}>
+          {sharing ? '⏳ Generating PDF...' : '💬 Share PDF on WhatsApp'}
+        </button>
         <button className="close-preview-btn" onClick={onClose}>✕ Close</button>
       </div>
 
@@ -44,7 +124,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
         <div className="pv-header">
           <div className="pv-logo-area">
             <div className="pv-logo-icon" style={{ background: 'transparent', border: 'none' }}>
-              <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src={logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div className="pv-company">
               <h1>{co.name}</h1>

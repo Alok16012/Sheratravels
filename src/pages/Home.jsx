@@ -3,10 +3,115 @@ import { useNavigate } from 'react-router-dom'
 import { usePackage } from '../context/PackageContext'
 import { supabase } from '../lib/supabase'
 
+function SendQuoteModal({ packages, onClose }) {
+  const [selectedPkg, setSelectedPkg] = useState(packages[0]?.id || '')
+  const [phone, setPhone]             = useState('')
+  const [sending, setSending]         = useState(false)
+
+  const pkg = packages.find(p => p.id === selectedPkg)
+
+  const handleSend = () => {
+    if (!pkg) { return }
+    setSending(true)
+
+    const incLines = (pkg.inclusions || []).slice(0, 6).map(i => `  ✅ ${i}`).join('\n')
+    const msg =
+`✈️ *${pkg.title || 'Kashmir Tour Package'}*
+
+📍 ${pkg.start_location || 'Kashmir, India'}
+🌙 ${pkg.nights || '—'} Nights / ${pkg.days || '—'} Days
+
+${incLines ? `📋 *What's Included*\n${incLines}\n` : ''}
+💬 For pricing & availability, reply to this message or call us directly.
+
+📞 *Shera Travels*
++91 9149406965 | +91 9858966518
+sheratravels21@gmail.com
+
+_Let's plan your dream trip to Kashmir!_ 🏔️`
+
+    const digits = phone.replace(/\D/g, '')
+    const num    = digits.length === 10 ? `91${digits}` : digits
+    const url    = num
+      ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`
+
+    window.open(url, '_blank')
+    setSending(false)
+    onClose()
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+         onClick={onClose}>
+      <div className="glass-card animate-fade"
+           style={{ width:'100%', maxWidth:440, padding:0, overflow:'hidden' }}
+           onClick={e => e.stopPropagation()}>
+
+        <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--border-glass)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ fontSize:16, fontWeight:800 }}>💬 Send Quote on WhatsApp</h3>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,0.05)', border:'none', color:'var(--text-dim)', cursor:'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ padding:'20px 24px', display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>Select Package</label>
+            <select className="glass-input" value={selectedPkg} onChange={e => setSelectedPkg(e.target.value)}>
+              {packages.map(p => (
+                <option key={p.id} value={p.id}>{p.title || 'Untitled'} ({p.nights}N/{p.days}D)</option>
+              ))}
+            </select>
+          </div>
+
+          {pkg && (
+            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid var(--border-glass)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--text-dim)', lineHeight:1.6 }}>
+              📍 {pkg.start_location || 'Kashmir'} &nbsp;•&nbsp; 🌙 {pkg.nights}N/{pkg.days}D
+              {(pkg.inclusions||[]).length > 0 && (
+                <div style={{ marginTop:6 }}>
+                  {(pkg.inclusions||[]).slice(0,3).map((inc, i) => <span key={i} style={{ display:'block' }}>✅ {inc}</span>)}
+                  {(pkg.inclusions||[]).length > 3 && <span style={{ color:'var(--primary)', fontSize:11 }}>+{(pkg.inclusions||[]).length - 3} more inclusions</span>}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>Customer WhatsApp Number <span style={{ fontWeight:400, textTransform:'none', color:'var(--text-dim)' }}>(optional)</span></label>
+            <input
+              className="glass-input"
+              placeholder="+91 9876543210  (leave blank to pick contact)"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div style={{ padding:'16px 24px', borderTop:'1px solid var(--border-glass)', display:'flex', gap:12, justifyContent:'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button
+            onClick={handleSend}
+            disabled={!pkg || sending}
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, background:'#25D366', border:'none', color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer' }}>
+            💬 Open WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const { packages, fetchPackages, createNewPackage, loading } = usePackage()
   const navigate = useNavigate()
-  
+  const [sendQuoteOpen, setSendQuoteOpen] = useState(false)
+
+  // Deduplicate packages by title for Send Quote (keep most recent per title)
+  const uniquePackages = packages.reduce((acc, pkg) => {
+    const existing = acc.find(p => (p.title || 'Untitled') === (pkg.title || 'Untitled'))
+    if (!existing) acc.push(pkg)
+    return acc
+  }, [])
+
   const [stats, setStats] = useState({
     totalLeads: 0,
     totalBookings: 0,
@@ -83,8 +188,7 @@ export default function Home() {
         {/* Recent Packages */}
         <section className="dashboard-section animate-fade" style={{ animationDelay: '0.4s' }}>
           <div className="section-head">
-            <h3>Recent Itineraries</h3>
-            <button className="btn btn-ghost" onClick={() => navigate('/')}>View All</button>
+            <h3>All Itineraries ({packages.length})</h3>
           </div>
           
           <div className="glass-card" style={{ overflow: 'hidden' }}>
@@ -102,7 +206,7 @@ export default function Home() {
                   <tr><td colSpan="4">Loading...</td></tr>
                 ) : packages.length === 0 ? (
                   <tr><td colSpan="4">No packages found.</td></tr>
-                ) : packages.slice(0, 5).map(pkg => (
+                ) : packages.map(pkg => (
                   <tr key={pkg.id}>
                     <td>
                       <div className="pkg-name-cell">
@@ -115,7 +219,7 @@ export default function Home() {
                     <td>
                       <div className="table-actions" style={{ display: 'flex', gap: '8px' }}>
                         <button className="btn btn-ghost" style={{ padding: '8px' }} onClick={() => navigate(`/editor/${pkg.id}`)}>✏️</button>
-                        <button className="btn btn-ghost" style={{ padding: '8px' }} onClick={() => navigate(`/crm/bookings?pkg=${pkg.id}`)}>📅</button>
+                        <button className="btn btn-ghost" style={{ padding: '8px' }} onClick={() => navigate(`/bookings?pkg=${pkg.id}`)}>📅</button>
                       </div>
                     </td>
                   </tr>
@@ -131,17 +235,17 @@ export default function Home() {
             <h3>Quick Actions</h3>
           </div>
           <div className="shortcuts-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-             <div className="glass-card shortcut-item" onClick={() => navigate('/crm/leads')}>
+             <div className="glass-card shortcut-item" onClick={() => navigate('/leads')}>
                 <div className="shortcut-meta">
                    <h4>👤 New Lead</h4>
                    <p>Add a fresh inquiry</p>
                 </div>
                 <span>→</span>
              </div>
-             <div className="glass-card shortcut-item">
+             <div className="glass-card shortcut-item" onClick={() => setSendQuoteOpen(true)}>
                 <div className="shortcut-meta">
-                   <h4>✉️ Send Quote</h4>
-                   <p>Email an itinerary</p>
+                   <h4>💬 Send Quote</h4>
+                   <p>Share itinerary on WhatsApp</p>
                 </div>
                 <span>→</span>
              </div>
@@ -155,6 +259,10 @@ export default function Home() {
           </div>
         </aside>
       </div>
+
+      {sendQuoteOpen && packages.length > 0 && (
+        <SendQuoteModal packages={uniquePackages} onClose={() => setSendQuoteOpen(false)} />
+      )}
 
       <style jsx>{`
         .dashboard-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }

@@ -240,7 +240,7 @@ export default function Leads() {
       if (created) {
         setConvertLead(null)
         await fetchLeads()
-        navigate(`/crm/bookings/${created.id}`)
+        navigate(`/bookings/${created.id}`)
       }
     } catch (err) {
       console.error('Convert error:', err)

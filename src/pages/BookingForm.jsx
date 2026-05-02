@@ -95,12 +95,16 @@ export default function BookingForm() {
 
       setStep('paid')
 
-      // Auto-send receipt email
-      if (isEmailConfigured && booking.customer_email) {
-        sendReceiptEmail(booking, advanceAmt, newPaidTotal, newBalance)
-          .then(() => toast.success('Receipt email sent!'))
-          .catch(() => {}) // silent fail — print is always available
-      }
+      // Auto-send receipt + admin notification via Hostinger SMTP
+      sendReceiptEmail(
+        { ...booking, paid_amount: newPaidTotal },
+        advanceAmt,
+        newPaidTotal,
+        newBalance,
+        { amount: advanceAmt, method: 'razorpay', razorpay_payment_id: response.razorpay_payment_id }
+      )
+        .then(() => toast.success('Receipt email sent!'))
+        .catch(() => {}) // silent fail — print is always available
     } catch (err) {
       if (err.message !== 'Payment cancelled by user') toast.error(err.message)
     }

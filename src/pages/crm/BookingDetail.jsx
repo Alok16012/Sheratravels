@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBooking, BOOKING_STATUSES } from '../../context/BookingContext'
 import { supabase } from '../../lib/supabase'
-import { sendInvoiceEmail, sendReceiptEmail, printInvoice, printReceipt, isEmailConfigured } from '../../lib/email'
+import { sendInvoiceEmail, printInvoice, printReceipt } from '../../lib/email'
 import toast from 'react-hot-toast'
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -140,19 +140,17 @@ export default function BookingDetail() {
                     onClick={() => printInvoice(booking, payments)}>
                     🖨️ Print Invoice
                   </button>
-                  {isEmailConfigured && booking?.customer_email && (
-                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}
-                      onClick={async () => {
-                        try {
-                          await sendInvoiceEmail(booking, payments)
-                          toast.success(`Invoice sent to ${booking.customer_email}`)
-                        } catch (e) {
-                          toast.error(e.message)
-                        }
-                      }}>
-                      📧 Email Invoice
-                    </button>
-                  )}
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}
+                    onClick={async () => {
+                      try {
+                        await sendInvoiceEmail(booking, payments)
+                        toast.success(booking.customer_email ? `Invoice sent to ${booking.customer_email}` : 'Admin notified')
+                      } catch (e) {
+                        toast.error(e.message)
+                      }
+                    }}>
+                    📧 Email Invoice
+                  </button>
                 </div>
               </div>
 
@@ -214,26 +212,9 @@ export default function BookingDetail() {
                     if (!paymentAmount) return toast.error('Enter amount')
                     const amt = Number(paymentAmount)
                     await recordPayment(booking.id, { amount: amt, method: paymentMethod, type: 'advance', status: 'success' })
-
-                    // Calculate receipt values for this payment
-                    const prevPaid    = Number(booking.paid_amount || 0)
-                    const newPaidTotal = prevPaid + amt
-                    const newBalance   = Math.max(0, Number(booking.total_amount || 0) - newPaidTotal)
-
                     setPaymentAmount('')
                     setShowPaymentModal(false)
-                    toast.success('Payment recorded!')
-
-                    // Auto-print receipt + optionally email
-                    const updatedBooking = { ...booking, paid_amount: newPaidTotal }
-                    if (isEmailConfigured && booking.customer_email) {
-                      sendReceiptEmail(updatedBooking, amt, newPaidTotal, newBalance)
-                        .then(() => toast.success(`Receipt emailed to ${booking.customer_email}`))
-                        .catch(() => {})
-                    }
-                    if (window.confirm('Print receipt for this payment?')) {
-                      printReceipt(updatedBooking, amt, newPaidTotal, newBalance)
-                    }
+                    // Email receipt sent automatically by recordPayment in BookingContext
                   }}>Save Payment</button>
                 </div>
               </div>

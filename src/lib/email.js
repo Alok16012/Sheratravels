@@ -1,24 +1,20 @@
-// ── Resend Email Helper ────────────────────────────────────
-// Free tier: 3000 emails/month — resend.com
-const RESEND_KEY = import.meta.env.VITE_RESEND_API_KEY || ''
-const FROM_EMAIL = import.meta.env.VITE_FROM_EMAIL     || 'Shera Travels <onboarding@resend.dev>'
+// ── Email via Vercel API → Hostinger SMTP ─────────────────
+// All email sending goes through /api/send-email (server-side)
+// Credentials are secure in Vercel env vars — never exposed to browser
 
-export const isEmailConfigured = !!RESEND_KEY
+export const isEmailConfigured = true // always available via server API
 
-// ── Send email via Resend API ──────────────────────────────
-async function sendEmail({ to, subject, html }) {
-  if (!RESEND_KEY) throw new Error('Resend API Key .env.local mein nahi hai.')
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_KEY}`,
-      'Content-Type':  'application/json',
-    },
-    body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
+async function callEmailAPI(payload) {
+  const res = await fetch('/api/send-email', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
   })
+  // 404 = API not available on local dev server — silently skip
+  if (res.status === 404) return { skipped: true }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.message || `Email send failed: ${res.status}`)
+    throw new Error(err.error || `Email failed: ${res.status}`)
   }
   return res.json()
 }
@@ -290,21 +286,39 @@ export function printReceipt(booking, justPaid, newPaidTotal, newBalance) {
 }
 
 // ── Public API ─────────────────────────────────────────────
-export async function sendInvoiceEmail(booking, payments = []) {
-  if (!booking.customer_email) throw new Error('Customer email nahi hai.')
-  return sendEmail({
-    to:      booking.customer_email,
-    subject: `Booking Confirmed — ${booking.booking_ref} | Shera Travels`,
-    html:    invoiceHTML(booking, payments),
+// ── Send receipt + admin/owner notifications (one API call) ──
+export async function sendReceiptEmail(booking, justPaid, newPaidTotal, newBalance, payment = null) {
+  return callEmailAPI({
+    type:       'payment',
+    booking,
+    payment:    payment || { amount: justPaid },
+    justPaid,
+    newPaidTotal,
+    newBalance,
   })
 }
 
-export async function sendReceiptEmail(booking, justPaid, newPaidTotal, newBalance) {
-  if (!booking.customer_email) throw new Error('Customer email nahi hai.')
-  return sendEmail({
-    to:      booking.customer_email,
-    subject: `Payment Receipt — ${booking.booking_ref} | Shera Travels`,
-    html:    receiptHTML(booking, justPaid, newPaidTotal, newBalance),
+// ── Send full invoice to customer + admin notification ────
+export async function sendInvoiceEmail(booking, payments = []) {
+  const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0)
+  const balance   = Math.max(0, Number(booking.total_amount || 0) - paidTotal)
+  return callEmailAPI({
+    type:        'invoice',
+    booking,
+    justPaid:    paidTotal,
+    newPaidTotal: paidTotal,
+    newBalance:  balance,
+  })
+}
+
+// ── New booking notification (no payment yet) ──────────────
+export async function sendNewBookingEmail(booking) {
+  return callEmailAPI({
+    type:    'new_booking',
+    booking,
+    justPaid: 0,
+    newPaidTotal: 0,
+    newBalance: Number(booking.total_amount || 0),
   })
 }
 

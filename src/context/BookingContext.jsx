@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useCallback } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
+import { sendNewBookingEmail, sendReceiptEmail } from '../lib/email'
 import toast from 'react-hot-toast'
 
 const BookingContext = createContext(null)
@@ -125,6 +126,8 @@ export function BookingProvider({ children }) {
         }
       }
       toast.success(`Booking ${data.booking_ref} created!`)
+      // Fire-and-forget — send confirmation email to customer + admin
+      sendNewBookingEmail(data).catch(err => console.warn('Booking email error:', err))
       return data
     } catch (err) {
       console.error('createBooking error:', err)
@@ -207,6 +210,13 @@ export function BookingProvider({ children }) {
       dispatch({ type: 'ADD_PAYMENT', payload: pay })
       await updateBooking(bookingId, { paid_amount: newPaid, status: newStatus })
       toast.success(`₹${Number(paymentData.amount).toLocaleString('en-IN')} payment recorded!`)
+
+      // Auto-send receipt to customer + sheratravels21@gmail.com
+      const newBalance    = Math.max(0, Number(booking.total_amount || 0) - newPaid)
+      const updatedBooking = { ...booking, paid_amount: newPaid }
+      sendReceiptEmail(updatedBooking, Number(paymentData.amount), newPaid, newBalance, payRow)
+        .then(() => toast.success(booking.customer_email ? `Receipt sent to ${booking.customer_email}` : 'Receipt sent to admin', { duration: 3000 }))
+        .catch(err => console.warn('Receipt email error:', err))
     } catch (err) {
       console.error('recordPayment error:', err)
       toast.error(`Payment failed: ${err.message || 'check RLS/schema'}`)

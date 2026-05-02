@@ -15,8 +15,8 @@ export default function MainLayout({ children, headerActions }) {
 
   const navItems = [
     { path: '/', label: 'Overview', icon: '📊' },
-    { path: '/crm/leads', label: 'Leads', icon: '👥' },
-    { path: '/crm/bookings', label: 'Bookings', icon: '📅' },
+    { path: '/leads', label: 'Leads', icon: '👥' },
+    { path: '/bookings', label: 'Bookings', icon: '📅' },
     { path: '/admin', label: 'Settings', icon: '⚙️' },
   ]
 
