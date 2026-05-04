@@ -148,7 +148,7 @@ export default function Home() {
   }
 
   const statCards = [
-    { label: 'Total Packages', val: packages.length, icon: '📦', color: 'var(--primary)' },
+    { label: 'Total Packages', val: uniquePackages.length, icon: '📦', color: 'var(--primary)' },
     { label: 'New Leads', val: stats.totalLeads, icon: '👥', color: '#10b981' },
     { label: 'Confirmed Bookings', val: stats.totalBookings, icon: '📅', color: '#f59e0b' },
     { label: 'Total Revenue', val: `₹${stats.activeRevenue.toLocaleString()}`, icon: '💰', color: '#22d3ee' },
@@ -188,9 +188,9 @@ export default function Home() {
         {/* Recent Packages */}
         <section className="dashboard-section animate-fade" style={{ animationDelay: '0.4s' }}>
           <div className="section-head">
-            <h3>All Itineraries ({packages.length})</h3>
+            <h3>All Itineraries ({uniquePackages.length})</h3>
           </div>
-          
+
           <div className="glass-card" style={{ overflow: 'hidden' }}>
             <table className="modern-table">
               <thead>
@@ -204,9 +204,9 @@ export default function Home() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan="4">Loading...</td></tr>
-                ) : packages.length === 0 ? (
+                ) : uniquePackages.length === 0 ? (
                   <tr><td colSpan="4">No packages found.</td></tr>
-                ) : packages.map(pkg => (
+                ) : uniquePackages.map(pkg => (
                   <tr key={pkg.id}>
                     <td>
                       <div className="pkg-name-cell">
