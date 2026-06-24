@@ -91,7 +91,8 @@ export default function Editor() {
   ]
 
   const navItems = [
-    { path: '/', label: 'Overview', icon: '📊' },
+    { path: '/', label: 'Dashboard', icon: '📊' },
+    { path: '/itinerary', label: 'Itinerary', icon: '📋' },
     { path: '/leads', label: 'Leads', icon: '👥' },
     { path: '/bookings', label: 'Bookings', icon: '📅' },
     { path: '/admin', label: 'Settings', icon: '⚙️' },

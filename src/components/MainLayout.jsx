@@ -14,7 +14,8 @@ export default function MainLayout({ children, headerActions }) {
   }
 
   const navItems = [
-    { path: '/', label: 'Overview', icon: '📊' },
+    { path: '/', label: 'Dashboard', icon: '📊' },
+    { path: '/itinerary', label: 'Itinerary', icon: '📋' },
     { path: '/leads', label: 'Leads', icon: '👥' },
     { path: '/bookings', label: 'Bookings', icon: '📅' },
     { path: '/admin', label: 'Settings', icon: '⚙️' },
@@ -75,10 +76,10 @@ export default function MainLayout({ children, headerActions }) {
                 <p style={{ fontSize: '14px', fontWeight: '700' }}>Admin User</p>
                 <p style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Super Admin</p>
               </div>
-              <div style={{ 
-                width: 40, height: 40, background: 'var(--primary)', 
-                borderRadius: '50%', display: 'flex', alignItems: 'center', 
-                justifyContent: 'center', fontWeight: '800', fontSize: '14px' 
+              <div style={{
+                width: 40, height: 40, background: 'var(--primary)',
+                borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontWeight: '800', fontSize: '14px'
               }}>AD</div>
             </div>
           </div>
@@ -88,6 +89,25 @@ export default function MainLayout({ children, headerActions }) {
           {children}
         </div>
       </main>
+
+      {/* Bottom Navigation (Mobile) */}
+      <nav className="bottom-nav">
+        {navItems.map(item => {
+          const isActive = item.path === '/'
+            ? location.pathname === '/'
+            : location.pathname.startsWith(item.path)
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`bottom-nav-item ${isActive ? 'active' : ''}`}
+            >
+              <span className="bottom-nav-icon">{item.icon}</span>
+              <span className="bottom-nav-label">{item.label}</span>
+            </NavLink>
+          )
+        })}
+      </nav>
     </div>
   )
 }

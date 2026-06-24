@@ -15,6 +15,9 @@ import Leads        from './pages/crm/Leads'
 import Bookings     from './pages/crm/Bookings'
 import BookingDetail from './pages/crm/BookingDetail'
 
+// Itinerary listing
+import Itinerary from './pages/Itinerary'
+
 // Auth & Public
 import Login       from './pages/Login'
 import BookingForm from './pages/BookingForm'
@@ -48,6 +51,7 @@ export default function App() {
 
               {/* ── Protected Dashboard ── */}
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
               <Route path="/editor/:id" element={<StandaloneRoute><Editor /></StandaloneRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
 

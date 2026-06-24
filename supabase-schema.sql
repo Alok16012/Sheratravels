@@ -202,6 +202,11 @@ alter table packages add column if not exists company_gst text default '01KODPS7
 -- update packages set company_addr = 'Radio Colony, Srinagar, Lawaypora, Srinagar, Jammu and Kashmir 190017' where company_addr = 'Budgam, Jammu & Kashmir, India';
 
 -- ═══════════════════════════════════════
+-- MIGRATION: Add client_name to packages
+-- ═══════════════════════════════════════
+alter table packages add column if not exists client_name text;
+
+-- ═══════════════════════════════════════
 -- STORAGE BUCKET
 -- Create manually in Supabase Dashboard:
 -- Storage → New Bucket → Name: "itinerary-photos" → Public: YES
