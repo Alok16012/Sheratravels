@@ -9,54 +9,74 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
 
   if (!open) return null
 
+  const generatePdf = async () => {
+    const el = document.getElementById('preview-doc')
+    const canvas = await html2canvas(el, {
+      useCORS: true,
+      allowTaint: false,
+      scale: 2,
+      logging: false,
+      backgroundColor: '#ffffff',
+      imageTimeout: 15000,
+      onclone: (doc) => {
+        doc.getElementById('preview-doc').style.maxHeight = 'none'
+      },
+    })
+
+    const pdf     = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+    const pageW   = pdf.internal.pageSize.getWidth()
+    const pageH   = pdf.internal.pageSize.getHeight()
+    const imgW    = pageW
+    const imgH    = (canvas.height * pageW) / canvas.width
+    const imgData = canvas.toDataURL('image/jpeg', 0.92)
+
+    pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH)
+    let remaining = imgH - pageH
+    let page = 1
+    while (remaining > 0) {
+      pdf.addPage()
+      pdf.addImage(imgData, 'JPEG', 0, -(page * pageH), imgW, imgH)
+      remaining -= pageH
+      page++
+    }
+    return pdf
+  }
+
+  const downloadPdf = async () => {
+    setSharing(true)
+    const toastId = toast.loading('Generating PDF...')
+    try {
+      const pdf = await generatePdf()
+      const clientName = pkg?.client_name ? ` - ${pkg.client_name}` : ''
+      const filename = `${pkg?.title || 'Itinerary'}${clientName}.pdf`
+      pdf.save(filename)
+      toast.dismiss(toastId)
+      toast.success('PDF downloaded!')
+    } catch (err) {
+      toast.dismiss(toastId)
+      toast.error('Could not generate PDF. Try Print → Save as PDF instead.')
+      console.error('PDF download error:', err)
+    } finally {
+      setSharing(false)
+    }
+  }
+
   const sharePdfOnWhatsApp = async () => {
     setSharing(true)
     const toastId = toast.loading('Generating PDF...')
     try {
-      const el = document.getElementById('preview-doc')
-
-      const canvas = await html2canvas(el, {
-        useCORS: true,
-        allowTaint: false,
-        scale: 2,
-        logging: false,
-        backgroundColor: '#ffffff',
-        imageTimeout: 15000,
-        onclone: (doc) => {
-          // Make sure cloned doc renders at full height
-          doc.getElementById('preview-doc').style.maxHeight = 'none'
-        },
-      })
-
-      const pdf     = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
-      const pageW   = pdf.internal.pageSize.getWidth()
-      const pageH   = pdf.internal.pageSize.getHeight()
-      const imgW    = pageW
-      const imgH    = (canvas.height * pageW) / canvas.width
-      const imgData = canvas.toDataURL('image/jpeg', 0.92)
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH)
-      let remaining = imgH - pageH
-      let page = 1
-      while (remaining > 0) {
-        pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, -(page * pageH), imgW, imgH)
-        remaining -= pageH
-        page++
-      }
-
-      const blob     = pdf.output('blob')
-      const filename = `${pkg?.title || 'Itinerary'}.pdf`
-      const file     = new File([blob], filename, { type: 'application/pdf' })
+      const pdf = await generatePdf()
+      const clientName = pkg?.client_name ? ` - ${pkg.client_name}` : ''
+      const filename = `${pkg?.title || 'Itinerary'}${clientName}.pdf`
+      const blob = pdf.output('blob')
+      const file = new File([blob], filename, { type: 'application/pdf' })
 
       toast.dismiss(toastId)
 
-      // Mobile: Web Share API → native share sheet includes WhatsApp
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ title: filename, files: [file] })
         toast.success('Shared!')
       } else {
-        // Desktop: download PDF + open WhatsApp so user can attach it
         const url = URL.createObjectURL(blob)
         const a   = document.createElement('a')
         a.href = url; a.download = filename; a.click()
@@ -108,15 +128,22 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
   return (
     <div className="preview-overlay open">
       <div className="preview-close-bar">
-        <button className="close-preview-btn" onClick={onPrint}>🖨️ Print / Save PDF</button>
+        <button
+          className="close-preview-btn"
+          onClick={downloadPdf}
+          disabled={sharing}
+          style={{ background: '#4F6EF7', color: '#fff', borderColor: '#4F6EF7', opacity: sharing ? 0.6 : 1 }}>
+          {sharing ? '⏳ Generating...' : '📥 Download PDF'}
+        </button>
+        <button className="close-preview-btn" onClick={onPrint}>🖨️ Print</button>
         <button
           className="close-preview-btn"
           onClick={sharePdfOnWhatsApp}
           disabled={sharing}
           style={{ background: 'rgba(37,211,102,0.15)', borderColor: 'rgba(37,211,102,0.4)', color: '#25D366', opacity: sharing ? 0.6 : 1 }}>
-          {sharing ? '⏳ Generating PDF...' : '💬 Share PDF on WhatsApp'}
+          💬 WhatsApp
         </button>
-        <button className="close-preview-btn" onClick={onClose}>✕ Close</button>
+        <button className="close-preview-btn" onClick={onClose}>✕</button>
       </div>
 
       <div className="preview-doc" id="preview-doc">
@@ -137,6 +164,17 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
             <div>📞 {co.phone}</div>
           </div>
         </div>
+
+        {/* CLIENT INFO */}
+        {pkg?.client_name && (
+          <div style={{ background: '#EEF2FF', border: '1px solid #C7D7FD', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18 }}>👤</span>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prepared For</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#1a1a1a' }}>{pkg.client_name}</div>
+            </div>
+          </div>
+        )}
 
         {/* HERO */}
         <div className="pv-hero">
