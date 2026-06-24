@@ -225,9 +225,9 @@ export default function BookingDetail() {
             <div className="share-view">
               <p className="text-dim">Share this link with the guest to let them view their itinerary and make payments.</p>
               <div className="link-box">
-                <input className="glass-input" readOnly value={`${window.location.origin}/crm/booking/form/${booking?.booking_token}`} />
+                <input className="glass-input" readOnly value={`${window.location.origin}/booking/form/${booking?.booking_token}`} />
                 <button className="btn btn-primary" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/crm/booking/form/${booking?.booking_token}`)
+                  navigator.clipboard.writeText(`${window.location.origin}/booking/form/${booking?.booking_token}`)
                   toast.success('Link copied!')
                 }}>Copy Link</button>
               </div>

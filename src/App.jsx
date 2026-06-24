@@ -40,7 +40,7 @@ const StandaloneRoute = ({ children }) => {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/crm">
+    <BrowserRouter>
       <PackageProvider>
         <CRMProvider>
           <BookingProvider>

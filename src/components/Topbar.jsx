@@ -58,7 +58,7 @@ export default function Topbar({ mode = 'home', packageTitle = '', onPreview, on
           </Link>
         ) : (
           <>
-            <Link to="/crm" className="btn-topbar" style={{ background: 'linear-gradient(135deg,#4F6EF7,#6366F1)', color: '#fff', border: 'none' }}>
+            <Link to="/" className="btn-topbar" style={{ background: 'linear-gradient(135deg,#4F6EF7,#6366F1)', color: '#fff', border: 'none' }}>
               <span>📊</span><span>CRM</span>
             </Link>
             <Link to="/admin" className="btn-topbar btn-admin-nav">
