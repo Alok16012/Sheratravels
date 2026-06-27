@@ -270,6 +270,76 @@ export default function Cabs() {
           overflow-x: auto;
         }
 
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.7);
+          backdrop-filter: blur(4px);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+        .modal-content {
+          width: 100%;
+          max-width: 500px;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid var(--border-glass);
+        }
+        .modal-header h3 { font-size: 18px; font-weight: 800; }
+        .modal-close-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: #F1F5F9;
+          border: none;
+          color: var(--text-dim);
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .modal-close-btn:hover {
+          background: rgba(239,68,68,0.2);
+          color: #ef4444;
+        }
+        .modal-body-custom {
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .form-field {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .form-field label {
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--text-muted);
+          text-transform: uppercase;
+        }
+        .modal-footer-custom {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          padding: 16px 24px;
+          border-top: 1px solid var(--border-glass);
+          background: #F8FAFC;
+        }
+
         @media (max-width: 768px) {
           .cabs-header {
             flex-direction: column;
