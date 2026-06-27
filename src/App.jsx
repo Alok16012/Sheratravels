@@ -18,6 +18,15 @@ import BookingDetail from './pages/crm/BookingDetail'
 // Itinerary listing
 import Itinerary from './pages/Itinerary'
 
+// Resources & Admin (placeholders)
+import Invoices  from './pages/Invoices'
+import Hotels    from './pages/Hotels'
+import Cabs      from './pages/Cabs'
+import Photos    from './pages/Photos'
+import Income    from './pages/Income'
+import Expenses  from './pages/Expenses'
+import AuditLogs from './pages/AuditLogs'
+
 // Auth & Public
 import Login       from './pages/Login'
 import BookingForm from './pages/BookingForm'
@@ -58,6 +67,15 @@ export default function App() {
               <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
               <Route path="/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
+
+              {/* ── Operations / Resources / Admin ── */}
+              <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+              <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
+              <Route path="/cabs" element={<ProtectedRoute><Cabs /></ProtectedRoute>} />
+              <Route path="/photos" element={<ProtectedRoute><Photos /></ProtectedRoute>} />
+              <Route path="/income" element={<ProtectedRoute><Income /></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             </Routes>
 
             <Toaster

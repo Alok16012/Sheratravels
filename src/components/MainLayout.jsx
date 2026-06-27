@@ -14,7 +14,49 @@ export default function MainLayout({ children, headerActions }) {
     navigate('/login')
   }
 
-  const navItems = [
+  const navGroups = [
+    {
+      label: 'Main',
+      items: [
+        { path: '/', label: 'Dashboard', icon: '📊' },
+      ],
+    },
+    {
+      label: 'Sales & CRM',
+      items: [
+        { path: '/leads', label: 'Leads', icon: '👥' },
+        { path: '/bookings', label: 'Bookings', icon: '📅' },
+      ],
+    },
+    {
+      label: 'Operations',
+      items: [
+        { path: '/itinerary', label: 'Itinerary', icon: '📋' },
+        { path: '/invoices', label: 'Invoices', icon: '🧾' },
+      ],
+    },
+    {
+      label: 'Resources',
+      items: [
+        { path: '/hotels', label: 'Hotels', icon: '🏨' },
+        { path: '/cabs', label: 'Cabs', icon: '🚕' },
+        { path: '/photos', label: 'Photos', icon: '🖼️' },
+      ],
+    },
+    {
+      label: 'Admin',
+      items: [
+        { path: '/income', label: 'Income', icon: '💰' },
+        { path: '/expenses', label: 'Expenses', icon: '📉' },
+        { path: '/audit-logs', label: 'Audit Logs', icon: '📜' },
+        { path: '/admin', label: 'Settings', icon: '⚙️' },
+      ],
+    },
+  ]
+
+  const navItems = navGroups.flatMap(g => g.items)
+
+  const mobileNavItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/itinerary', label: 'Itinerary', icon: '📋' },
     { path: '/leads', label: 'Leads', icon: '👥' },
@@ -38,16 +80,21 @@ export default function MainLayout({ children, headerActions }) {
         </NavLink>
 
         <nav className="nav-links">
-          {navItems.map(item => (
-            <NavLink 
-              key={item.path} 
-              to={item.path} 
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
+          {navGroups.map(group => (
+            <div key={group.label} className="nav-group">
+              <div className="nav-group-label">{group.label}</div>
+              {group.items.map(item => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -115,7 +162,7 @@ export default function MainLayout({ children, headerActions }) {
 
       {/* Bottom Navigation (Mobile) */}
       <nav className="bottom-nav">
-        {navItems.map(item => {
+        {mobileNavItems.map(item => {
           const isActive = item.path === '/'
             ? location.pathname === '/'
             : location.pathname.startsWith(item.path)
