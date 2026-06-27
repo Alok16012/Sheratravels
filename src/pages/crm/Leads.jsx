@@ -407,11 +407,11 @@ export default function Leads() {
           flex-wrap: wrap;
         }
         .filter-pill {
-          padding: 6px 14px;
-          border-radius: 20px;
+          padding: 8px 16px;
+          border-radius: 999px;
           font-size: 12px;
-          font-weight: 600;
-          background: rgba(255,255,255,0.05);
+          font-weight: 700;
+          background: #FFFFFF;
           border: 1px solid var(--border-glass);
           color: var(--text-muted);
           cursor: pointer;
@@ -419,7 +419,7 @@ export default function Leads() {
         }
         .filter-pill:hover {
           border-color: var(--primary);
-          color: var(--primary);
+          color: var(--primary-dark);
         }
         .filter-pill.active {
           background: var(--primary);

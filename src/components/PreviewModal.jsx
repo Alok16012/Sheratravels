@@ -132,7 +132,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
           className="close-preview-btn"
           onClick={downloadPdf}
           disabled={sharing}
-          style={{ background: '#4F6EF7', color: '#fff', borderColor: '#4F6EF7', opacity: sharing ? 0.6 : 1 }}>
+          style={{ background: '#10B981', color: '#fff', borderColor: '#10B981', opacity: sharing ? 0.6 : 1 }}>
           {sharing ? '⏳ Generating...' : '📥 Download PDF'}
         </button>
         <button className="close-preview-btn" onClick={onPrint}>🖨️ Print</button>
@@ -167,7 +167,7 @@ export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days
 
         {/* CLIENT INFO */}
         {pkg?.client_name && (
-          <div style={{ background: '#EEF2FF', border: '1px solid #C7D7FD', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 18 }}>👤</span>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prepared For</div>

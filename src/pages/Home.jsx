@@ -148,10 +148,10 @@ export default function Home() {
   }
 
   const statCards = [
-    { label: 'Total Packages', val: uniquePackages.length, icon: '📦', color: 'var(--primary)' },
-    { label: 'New Leads', val: stats.totalLeads, icon: '👥', color: '#10b981' },
-    { label: 'Confirmed Bookings', val: stats.totalBookings, icon: '📅', color: '#f59e0b' },
-    { label: 'Total Revenue', val: `₹${stats.activeRevenue.toLocaleString()}`, icon: '💰', color: '#22d3ee' },
+    { label: 'Total Packages', val: uniquePackages.length, icon: '📦', color: '#059669', bgColor: '#D1FAE5' },
+    { label: 'New Leads', val: stats.totalLeads, icon: '👥', color: '#2563EB', bgColor: '#DBEAFE' },
+    { label: 'Confirmed Bookings', val: stats.totalBookings, icon: '📅', color: '#B45309', bgColor: '#FEF3C7' },
+    { label: 'Total Revenue', val: `₹${stats.activeRevenue.toLocaleString()}`, icon: '💰', color: '#0E7490', bgColor: '#CFFAFE' },
   ]
 
   return (
@@ -174,8 +174,8 @@ export default function Home() {
               <p className="stat-label">{s.label}</p>
               <h2 className="stat-value">{s.val}</h2>
             </div>
-            <div className="stat-icon-wrap" style={{ 
-               background: 'rgba(255, 255, 255, 0.05)',
+            <div className="stat-icon-wrap" style={{
+               background: s.bgColor,
                color: s.color,
             }}>
               {s.icon}

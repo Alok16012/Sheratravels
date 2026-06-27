@@ -6,6 +6,7 @@ export default function MainLayout({ children, headerActions }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleLogout = () => {
     localStorage.removeItem('shara_auth')
@@ -68,9 +69,31 @@ export default function MainLayout({ children, headerActions }) {
             <h2 className="text-gradient">
               {navItems.find(n => n.path === location.pathname)?.label || 'Dashboard'}
             </h2>
+            <div className="search-bar">
+              <span className="search-bar-icon">🔍</span>
+              <input
+                className="search-bar-input"
+                type="text"
+                placeholder="Search for anything..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
           <div className="header-right">
             {headerActions && <div className="header-actions-wrap">{headerActions}</div>}
+            <div className="header-icons-group">
+              <button className="header-icon-btn header-icon-help" title="Help">
+                ❔
+              </button>
+              <button className="header-icon-btn header-icon-notif" title="Notifications">
+                🔔
+                <span className="badge">3</span>
+              </button>
+              <button className="header-icon-btn header-icon-settings" title="Settings" onClick={() => navigate('/admin')}>
+                ⚙️
+              </button>
+            </div>
             <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: '14px', fontWeight: '700' }}>Admin User</p>
@@ -79,7 +102,7 @@ export default function MainLayout({ children, headerActions }) {
               <div style={{
                 width: 40, height: 40, background: 'var(--primary)',
                 borderRadius: '50%', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontWeight: '800', fontSize: '14px'
+                justifyContent: 'center', fontWeight: '800', fontSize: '14px', color: '#fff'
               }}>AD</div>
             </div>
           </div>
