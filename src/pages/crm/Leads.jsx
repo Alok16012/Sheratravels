@@ -284,53 +284,87 @@ export default function Leads() {
       </div>
 
       <div className="glass-card leads-table-card">
-        <div className="leads-list">
-          {filteredLeads.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">👥</div>
-              <h3>No leads found</h3>
-              <p>Add your first lead to get started</p>
-            </div>
-          ) : filteredLeads.map(lead => (
-            <div key={lead.id} className="lead-item">
-              <div className="lead-avatar" style={{ background: avatarColor(lead.name) }}>
-                {initials(lead.name)}
-              </div>
-              <div className="lead-info">
-                <p className="lead-name">{lead.name}</p>
-                <p className="lead-meta">{lead.destination || 'No destination'} • {lead.phone || 'No phone'}</p>
-              </div>
-              <div className="lead-stage">
-                <span className="stage-badge" style={{ color: LEAD_STAGES.find(s => s.id === lead.stage)?.color }}>
-                  {LEAD_STAGES.find(s => s.id === lead.stage)?.emoji} {LEAD_STAGES.find(s => s.id === lead.stage)?.label || lead.stage}
-                </span>
-              </div>
-              <div className="lead-actions">
-                {lead.phone && (
-                  <a
-                    className="action-btn call"
-                    href={`tel:${lead.phone.replace(/\s/g, '')}`}
-                    title="Call"
-                    onClick={e => e.stopPropagation()}
-                  >📞</a>
-                )}
-                {(lead.whatsapp || lead.phone) && (
-                  <a
-                    className="action-btn whatsapp"
-                    href={`https://wa.me/${cleanPhone(lead.whatsapp || lead.phone)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="WhatsApp"
-                    onClick={e => e.stopPropagation()}
-                  >💬</a>
-                )}
-                <button className="action-btn convert" onClick={() => setConvertLead(lead)} title="Convert to Booking">💼</button>
-                <button className="action-btn" onClick={() => setEditingLead(lead)} title="Edit">✏️</button>
-                <button className="action-btn delete" onClick={() => handleDelete(lead.id)} title="Delete">🗑️</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        {filteredLeads.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">👥</div>
+            <h3>No leads found</h3>
+            <p>Add your first lead to get started</p>
+          </div>
+        ) : (
+          <div className="leads-table-scroll">
+            <table className="modern-table leads-excel-table">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Destination</th>
+                  <th>Phone</th>
+                  <th>Travel Date</th>
+                  <th>Pax</th>
+                  <th>Source</th>
+                  <th>Stage</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLeads.map(lead => {
+                  const stage = LEAD_STAGES.find(s => s.id === lead.stage)
+                  const pax = (lead.adults || 0) + (lead.children || 0) + (lead.infants || 0)
+                  return (
+                    <tr key={lead.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="lead-avatar" style={{ background: avatarColor(lead.name) }}>
+                            {initials(lead.name)}
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: 13.5 }}>{lead.name}</span>
+                        </div>
+                      </td>
+                      <td>{lead.destination || '—'}</td>
+                      <td>{lead.phone || lead.whatsapp || '—'}</td>
+                      <td>
+                        {lead.travel_date
+                          ? new Date(lead.travel_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })
+                          : '—'}
+                      </td>
+                      <td>{pax > 0 ? `${pax} pax` : '—'}</td>
+                      <td>{lead.source || '—'}</td>
+                      <td>
+                        <span className="stage-badge" style={{ color: stage?.color, background: `${stage?.color}15` }}>
+                          {stage?.emoji} {stage?.label || lead.stage}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="lead-actions">
+                          {lead.phone && (
+                            <a
+                              className="action-btn call"
+                              href={`tel:${lead.phone.replace(/\s/g, '')}`}
+                              title="Call"
+                              onClick={e => e.stopPropagation()}
+                            >📞</a>
+                          )}
+                          {(lead.whatsapp || lead.phone) && (
+                            <a
+                              className="action-btn whatsapp"
+                              href={`https://wa.me/${cleanPhone(lead.whatsapp || lead.phone)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="WhatsApp"
+                              onClick={e => e.stopPropagation()}
+                            >💬</a>
+                          )}
+                          <button className="action-btn convert" onClick={() => setConvertLead(lead)} title="Convert to Booking">💼</button>
+                          <button className="action-btn" onClick={() => setEditingLead(lead)} title="Edit">✏️</button>
+                          <button className="action-btn delete" onClick={() => handleDelete(lead.id)} title="Delete">🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {(showAdd || editingLead) && (
@@ -431,99 +465,72 @@ export default function Leads() {
           padding: 0;
           overflow: hidden;
         }
-        .leads-list {
-          display: flex;
-          flex-direction: column;
+        .leads-table-scroll {
+          overflow-x: auto;
         }
-        .lead-item {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px 20px;
-          border-bottom: 1px solid var(--border-glass);
+        .leads-excel-table th,
+        .leads-excel-table td {
+          white-space: nowrap;
+        }
+        .leads-excel-table tbody tr {
           transition: background 0.15s;
         }
-        .lead-item:last-child {
-          border-bottom: none;
-        }
-        .lead-item:hover {
-          background: rgba(255,255,255,0.02);
-        }
         .lead-avatar {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
+          width: 32px;
+          height: 32px;
+          border-radius: 9px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 800;
-          font-size: 14px;
-          color: #fff;
-          flex-shrink: 0;
-        }
-        .lead-info {
-          flex: 1;
-          min-width: 0;
-        }
-        .lead-name {
-          font-weight: 700;
-          font-size: 15px;
-          margin-bottom: 2px;
-        }
-        .lead-meta {
           font-size: 12px;
-          color: var(--text-dim);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .lead-stage {
+          color: #fff;
           flex-shrink: 0;
         }
         .stage-badge {
           font-size: 11px;
           font-weight: 700;
           padding: 4px 10px;
-          background: rgba(255,255,255,0.05);
           border-radius: 20px;
           white-space: nowrap;
         }
         .lead-actions {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           flex-shrink: 0;
+          justify-content: flex-end;
         }
         .action-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 32px;
+          height: 32px;
+          border-radius: 9px;
           border: 1px solid var(--border-glass);
-          background: rgba(255,255,255,0.03);
-          color: #fff;
+          background: #F8FAFC;
+          color: var(--text-muted);
           cursor: pointer;
-          font-size: 14px;
+          font-size: 13px;
           transition: all 0.15s;
         }
         .action-btn:hover {
-          background: rgba(255,255,255,0.1);
+          background: #F1F5F9;
           transform: scale(1.05);
         }
         .action-btn.delete:hover {
-          background: rgba(239,68,68,0.2);
+          background: rgba(239,68,68,0.12);
           border-color: #ef4444;
         }
         .action-btn.call {
-          background: rgba(59, 130, 246, 0.12);
-          border-color: rgba(59, 130, 246, 0.4);
-          color: #60a5fa;
+          background: rgba(59, 130, 246, 0.1);
+          border-color: rgba(59, 130, 246, 0.3);
+          color: #2563eb;
           text-decoration: none;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
         .action-btn.whatsapp {
-          background: rgba(37, 211, 102, 0.15);
-          border-color: rgba(37, 211, 102, 0.4);
+          background: rgba(37, 211, 102, 0.12);
+          border-color: rgba(37, 211, 102, 0.35);
           color: #25D366;
           text-decoration: none;
           display: inline-flex;
@@ -531,8 +538,8 @@ export default function Leads() {
           justify-content: center;
         }
         .action-btn.convert {
-          background: rgba(245, 158, 11, 0.15);
-          border-color: rgba(245, 158, 11, 0.4);
+          background: rgba(245, 158, 11, 0.12);
+          border-color: rgba(245, 158, 11, 0.35);
           color: #f59e0b;
         }
         .action-btn.convert:hover {

@@ -14,8 +14,8 @@
   --text-dim: #94A3B8;
   
   /* Layout */
-  --sidebar-w: 280px;
-  --header-h: 70px;
+  --sidebar-w: 216px;
+  --header-h: 64px;
   --radius: 14px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -56,14 +56,14 @@ body {
   box-shadow: 2px 0 12px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
-  padding: 32px 20px;
+  padding: 24px 14px;
   z-index: 1000;
 }
 
 .main-viewport {
   flex: 1;
   margin-left: var(--sidebar-w);
-  padding: 32px 40px;
+  padding: 28px 32px;
   min-width: 0;
 }
 
@@ -127,51 +127,54 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 40px;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding: 0 6px;
   text-decoration: none;
   color: inherit;
 }
 
 .brand-logo {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   background: var(--primary);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
+  font-size: 13px;
   color: #fff;
+  flex-shrink: 0;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .brand-name {
   font-weight: 800;
-  font-size: 20px;
-  letter-spacing: -0.5px;
+  font-size: 16px;
+  letter-spacing: -0.3px;
 }
 
 .nav-links {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   list-style: none; /* remove bullets */
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: var(--transition);
   color: var(--text-muted);
   font-weight: 600;
   text-decoration: none; /* remove underline */
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .nav-item:hover {
@@ -184,12 +187,12 @@ body {
   color: var(--primary-dark);
 }
 
-.nav-icon { font-size: 20px; }
+.nav-icon { font-size: 17px; }
 
 .nav-footer {
   margin-top: auto;
   border-top: 1px solid var(--border-glass);
-  padding-top: 24px;
+  padding-top: 16px;
 }
 
 /* ── HEADER SEARCH BAR ── */
