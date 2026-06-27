@@ -207,6 +207,84 @@ alter table packages add column if not exists company_gst text default '01KODPS7
 alter table packages add column if not exists client_name text;
 
 -- ═══════════════════════════════════════
+-- MIGRATION: New modules — Invoices, Hotels, Cabs, Income, Expenses, Audit Logs
+-- ═══════════════════════════════════════
+
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  invoice_number text unique,
+  client_name text not null,
+  booking_id uuid references bookings(id) on delete set null,
+  amount numeric default 0,
+  status text default 'unpaid',          -- 'unpaid' | 'paid' | 'overdue'
+  issue_date date default current_date,
+  due_date date,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists hotels (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  location text,
+  star_rating int default 3,
+  contact_person text,
+  phone text,
+  email text,
+  rate_per_night numeric default 0,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists cabs (
+  id uuid primary key default gen_random_uuid(),
+  vendor_name text not null,
+  vehicle_type text,
+  contact_person text,
+  phone text,
+  rate numeric default 0,
+  rate_unit text default 'per day',      -- 'per day' | 'per km' | 'per trip'
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists income (
+  id uuid primary key default gen_random_uuid(),
+  date date default current_date,
+  source text,
+  category text,
+  amount numeric default 0,
+  booking_id uuid references bookings(id) on delete set null,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists expenses (
+  id uuid primary key default gen_random_uuid(),
+  date date default current_date,
+  category text,
+  vendor text,
+  amount numeric default 0,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor text default 'Administrator',
+  action text not null,
+  details text,
+  created_at timestamptz default now()
+);
+
+alter table invoices disable row level security;
+alter table hotels disable row level security;
+alter table cabs disable row level security;
+alter table income disable row level security;
+alter table expenses disable row level security;
+alter table audit_logs disable row level security;
+
+-- ═══════════════════════════════════════
 -- STORAGE BUCKET
 -- Create manually in Supabase Dashboard:
 -- Storage → New Bucket → Name: "itinerary-photos" → Public: YES

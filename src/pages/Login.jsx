@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import loginBg from '../assets/login-bg.png'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const [id, setId] = useState('')
@@ -12,12 +13,13 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault()
     setLoading(true)
-    
+
     // Simulate auth delay
     setTimeout(() => {
       if (id === 'admin' && pass === 'admin123') {
         localStorage.setItem('shara_auth', 'true')
         toast.success('Welcome back, Admin!')
+        supabase.from('audit_logs').insert([{ actor: 'Administrator', action: 'Login', details: `Logged in as ${id}` }])
         navigate('/')
       } else {
         toast.error('Invalid ID or Password')

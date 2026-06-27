@@ -583,14 +583,14 @@ export default function Leads() {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: rgba(255,255,255,0.05);
+          background: #F1F5F9;
           border: none;
           color: var(--text-dim);
           cursor: pointer;
           font-size: 14px;
         }
         .modal-close-btn:hover {
-          background: rgba(239,68,68,0.2);
+          background: #FEE2E2;
           color: #ef4444;
         }
         .modal-body-custom {
@@ -621,7 +621,7 @@ export default function Leads() {
           gap: 12px;
           padding: 16px 24px;
           border-top: 1px solid var(--border-glass);
-          background: rgba(255,255,255,0.02);
+          background: #F8FAFC;
         }
         
         @media (max-width: 1024px) {
