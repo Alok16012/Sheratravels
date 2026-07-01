@@ -259,7 +259,7 @@ export default function BookingDetail() {
         .detail-workspace { display: grid; grid-template-columns: 280px 1fr; gap: 32px; }
         .detail-tabs { padding: 12px; height: fit-content; display: flex; flex-direction: column; gap: 6px; }
         .detail-tab { padding: 12px 16px; border: none; background: none; color: var(--text-dim); text-align: left; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: var(--transition); }
-        .detail-tab:hover { background: rgba(255,255,255,0.03); color: #fff; }
+        .detail-tab:hover { background: #F1F5F9; color: var(--text-bright); }
         .detail-tab.active { background: var(--primary); color: #fff; }
 
         .detail-main { padding: 32px; min-height: 400px; }

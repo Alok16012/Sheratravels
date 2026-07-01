@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePackage } from '../context/PackageContext'
+import { useCRM, LEAD_STAGES } from '../context/CRMContext'
 import { supabase } from '../lib/supabase'
+
+const avatarColor = (name = '') => {
+  const colors = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9']
+  return colors[(name.charCodeAt(0) || 0) % colors.length]
+}
+const initials = (name = '') => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
 
 function SendQuoteModal({ packages, onClose }) {
   const [selectedPkg, setSelectedPkg] = useState(packages[0]?.id || '')
@@ -101,7 +108,8 @@ _Let's plan your dream trip to Kashmir!_ 🏔️`
 }
 
 export default function Home() {
-  const { packages, fetchPackages, createNewPackage, loading } = usePackage()
+  const { packages, fetchPackages, createNewPackage } = usePackage()
+  const { leads, fetchLeads, loading: leadsLoading } = useCRM()
   const navigate = useNavigate()
   const [sendQuoteOpen, setSendQuoteOpen] = useState(false)
 
@@ -112,16 +120,13 @@ export default function Home() {
     return acc
   }, [])
 
+  const recentLeads = leads.slice(0, 6)
+
   const [stats, setStats] = useState({
     totalLeads: 0,
     totalBookings: 0,
     activeRevenue: 0,
   })
-
-  useEffect(() => {
-    fetchPackages()
-    loadQuickStats()
-  }, [fetchPackages])
 
   const loadQuickStats = async () => {
     try {
@@ -129,9 +134,9 @@ export default function Home() {
         supabase.from('leads').select('id', { count: 'exact', head: true }),
         supabase.from('bookings').select('total_amount')
       ])
-      
+
       const revenue = (bookingsRes.data || []).reduce((acc, b) => acc + (Number(b.total_amount) || 0), 0)
-      
+
       setStats({
         totalLeads: leadsRes.count || 0,
         totalBookings: (bookingsRes.data || []).length,
@@ -141,6 +146,12 @@ export default function Home() {
       console.warn('Could not load extra stats:', e)
     }
   }
+
+  useEffect(() => {
+    fetchPackages()
+    fetchLeads()
+    loadQuickStats()
+  }, [fetchPackages, fetchLeads])
 
   const handleNew = async () => {
     const id = await createNewPackage()
@@ -185,45 +196,56 @@ export default function Home() {
       </div>
 
       <div className="dashboard-sections">
-        {/* Recent Packages */}
+        {/* Recent Leads */}
         <section className="dashboard-section animate-fade" style={{ animationDelay: '0.4s' }}>
           <div className="section-head">
-            <h3>All Itineraries ({uniquePackages.length})</h3>
+            <h3>Recent Leads ({leads.length})</h3>
+            <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => navigate('/leads')}>View All →</button>
           </div>
 
           <div className="glass-card" style={{ overflow: 'hidden' }}>
             <table className="modern-table">
               <thead>
                 <tr>
-                  <th>Package Name</th>
-                  <th>Duration</th>
-                  <th>Location</th>
-                  <th>Actions</th>
+                  <th>Name</th>
+                  <th>Destination</th>
+                  <th>Phone</th>
+                  <th>Stage</th>
+                  <th>Received</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan="4">Loading...</td></tr>
-                ) : uniquePackages.length === 0 ? (
-                  <tr><td colSpan="4">No packages found.</td></tr>
-                ) : uniquePackages.map(pkg => (
-                  <tr key={pkg.id}>
-                    <td>
-                      <div className="pkg-name-cell">
-                        <div className="pkg-mini-img">🗺️</div>
-                        <span>{pkg.title || 'Untitled'}</span>
-                      </div>
-                    </td>
-                    <td>{pkg.nights}N / {pkg.days}D</td>
-                    <td>{pkg.start_location || 'Kashmir'}</td>
-                    <td>
-                      <div className="table-actions" style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn btn-ghost" style={{ padding: '8px' }} onClick={() => navigate(`/editor/${pkg.id}`)}>✏️</button>
-                        <button className="btn btn-ghost" style={{ padding: '8px' }} onClick={() => navigate(`/bookings?pkg=${pkg.id}`)}>📅</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {leadsLoading ? (
+                  <tr><td colSpan="5">Loading...</td></tr>
+                ) : recentLeads.length === 0 ? (
+                  <tr><td colSpan="5">No leads yet.</td></tr>
+                ) : recentLeads.map(lead => {
+                  const stage = LEAD_STAGES.find(s => s.id === lead.stage)
+                  return (
+                    <tr key={lead.id} className="clickable-row" onClick={() => navigate('/leads')}>
+                      <td>
+                        <div className="pkg-name-cell">
+                          <div className="lead-avatar" style={{ background: avatarColor(lead.name) }}>
+                            {initials(lead.name)}
+                          </div>
+                          <span>{lead.name || 'Unnamed'}</span>
+                        </div>
+                      </td>
+                      <td>{lead.destination || '—'}</td>
+                      <td>{lead.phone || lead.whatsapp || '—'}</td>
+                      <td>
+                        <span className="stage-badge" style={{ color: stage?.color, background: `${stage?.color}15` }}>
+                          {stage?.emoji} {stage?.label || lead.stage}
+                        </span>
+                      </td>
+                      <td>
+                        {lead.created_at
+                          ? new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                          : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -292,6 +314,28 @@ export default function Home() {
         
         .pkg-name-cell { display: flex; align-items: center; gap: 12px; font-weight: 600; }
         .pkg-mini-img { width: 32px; height: 32px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+
+        .lead-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 12px;
+          color: #fff;
+          flex-shrink: 0;
+        }
+        .stage-badge {
+          font-size: 11px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 20px;
+          white-space: nowrap;
+        }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background: rgba(255,255,255,0.03); }
 
         .shortcut-item { 
           padding: 20px; 

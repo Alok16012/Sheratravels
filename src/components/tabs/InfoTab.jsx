@@ -27,8 +27,13 @@ function ListAddRow({ placeholder, onAdd }) {
 export default function InfoTab({ active }) {
   const { currentPackage: pkg, updateField, library, setHeroPhoto } = usePackage()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
 
   if (!pkg) return null
+
+  const filteredLibrary = library.filter(p =>
+    (p.tag_name || '').toLowerCase().includes(pickerSearch.toLowerCase())
+  )
 
   const inc = pkg.inclusions || []
   const exc = pkg.exclusions || []
@@ -78,7 +83,7 @@ export default function InfoTab({ active }) {
         <div
           className="photo-slot"
           style={{ aspectRatio: '16/7', width: '100%', borderRadius: '10px' }}
-          onClick={() => setPickerOpen(true)}
+          onClick={() => { setPickerSearch(''); setPickerOpen(true) }}
         >
           {pkg.hero_photo_url
             ? <img src={pkg.hero_photo_url} alt="Hero" />
@@ -119,13 +124,26 @@ export default function InfoTab({ active }) {
               <h3>📸 Select Cover Photo</h3>
               <button className="modal-close" onClick={() => setPickerOpen(false)}>✕</button>
             </div>
+            {library.length > 0 && (
+              <div className="modal-search">
+                <input
+                  className="glass-input"
+                  autoFocus
+                  placeholder="Search by name..."
+                  value={pickerSearch}
+                  onChange={e => setPickerSearch(e.target.value)}
+                />
+              </div>
+            )}
             <div className="modal-body">
               {library.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">📭</div>
                   <p>Upload photos in the Photos tab first.</p>
                 </div>
-              ) : library.map(p => (
+              ) : filteredLibrary.length === 0 ? (
+                <div className="picker-empty">No photos match &quot;{pickerSearch}&quot;.</div>
+              ) : filteredLibrary.map(p => (
                 <div key={p.id} className="picker-item"
                   onClick={() => { setHeroPhoto(p); setPickerOpen(false) }}>
                   <img src={p.photo_url} alt={p.tag_name} />

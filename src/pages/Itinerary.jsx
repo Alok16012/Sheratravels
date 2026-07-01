@@ -16,13 +16,6 @@ export default function Itinerary() {
     fetchLeads()
   }, [fetchPackages, fetchLeads])
 
-  // Deduplicate packages by title
-  const uniquePackages = packages.reduce((acc, pkg) => {
-    const existing = acc.find(p => (p.title || 'Untitled') === (pkg.title || 'Untitled'))
-    if (!existing) acc.push(pkg)
-    return acc
-  }, [])
-
   useEffect(() => {
     // Initialize clientMap from packages
     const map = {}
@@ -66,7 +59,7 @@ export default function Itinerary() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-bright)', marginBottom: 4 }}>Itineraries</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{uniquePackages.length} packages created</p>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{packages.length} packages created</p>
         </div>
         <button className="btn btn-primary" onClick={handleNew}>
           <span>+</span> New Itinerary
@@ -75,7 +68,7 @@ export default function Itinerary() {
 
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
-      ) : uniquePackages.length === 0 ? (
+      ) : packages.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📋</div>
           <h2>No itineraries yet</h2>
@@ -96,7 +89,7 @@ export default function Itinerary() {
                 </tr>
               </thead>
               <tbody>
-                {uniquePackages.map(pkg => (
+                {packages.map(pkg => (
                   <tr key={pkg.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

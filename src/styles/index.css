@@ -1320,6 +1320,28 @@ body {
   border-color: rgba(99, 102, 241, 0.3);
 }
 
+.day-card.dragging {
+  opacity: 0.5;
+}
+
+.day-card.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+}
+
+.day-drag-handle {
+  cursor: grab;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 2px;
+  user-select: none;
+}
+
+.day-drag-handle:active {
+  cursor: grabbing;
+}
+
 .day-header {
   display: flex;
   justify-content: space-between;
@@ -1662,6 +1684,21 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+}
+
+.modal-search {
+  padding: 12px 20px 0;
+}
+
+.modal-search .glass-input {
+  width: 100%;
+}
+
+.picker-empty {
+  text-align: center;
+  padding: 32px 12px;
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .modal-footer {

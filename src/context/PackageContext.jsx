@@ -268,6 +268,15 @@ export function PackageProvider({ children }) {
     dispatch({ type: 'SET_DAYS', payload: updated })
   }, [state.days])
 
+  const moveDay = useCallback((fromIdx, toIdx) => {
+    if (fromIdx === toIdx || fromIdx == null || toIdx == null) return
+    const updated = [...state.days]
+    if (fromIdx < 0 || fromIdx >= updated.length || toIdx < 0 || toIdx >= updated.length) return
+    const [moved] = updated.splice(fromIdx, 1)
+    updated.splice(toIdx, 0, moved)
+    dispatch({ type: 'SET_DAYS', payload: updated })
+  }, [state.days])
+
   // ── PHOTO LIBRARY ─────────────────────
   const fetchLibrary = useCallback(async () => {
     const { data } = await supabase.from('photo_library').select('*').order('created_at', { ascending: false })
@@ -359,7 +368,7 @@ export function PackageProvider({ children }) {
       fetchPackages, loadPackage, createNewPackage, deletePackage,
       updateField, triggerSave, saveAll,
       addPrice, addPricePreset, updatePrice, removePrice,
-      addDay, removeDay, updateDay, toggleDayOpen,
+      addDay, removeDay, updateDay, toggleDayOpen, moveDay,
       fetchLibrary, uploadToLibrary, deleteLibraryPhoto,
       setDayPhoto, removeDayPhoto, setHeroPhoto, setHotelPhoto,
     }}>

@@ -3,10 +3,46 @@ import { usePackage } from '../context/PackageContext'
 import toast from 'react-hot-toast'
 
 const MEALS = ['Stay', 'Breakfast', 'Lunch', 'Dinner']
+const THEME_OPTIONS = [
+  'Adventure', 'Sightseeing', 'Pilgrimage', 'Honeymoon', 'Family', 'Wildlife',
+  'Beach', 'Hill Station', 'Cultural', 'Heritage', 'Trekking', 'Wellness',
+  'Leisure', 'Nature', 'Shopping', 'Nightlife',
+]
 
 export default function DayCard({ day, idx }) {
-  const { updateDay, removeDay, toggleDayOpen, library, setDayPhoto, removeDayPhoto, setHotelPhoto } = usePackage()
+  const { updateDay, removeDay, toggleDayOpen, moveDay, library, setDayPhoto, removeDayPhoto, setHotelPhoto } = usePackage()
   const [pickerTarget, setPickerTarget] = useState(null) // 'slot-0','slot-1','slot-2','hotel'
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+  const [dragging, setDragging] = useState(false)
+
+  const handleDragStart = (e) => {
+    e.stopPropagation()
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(idx))
+    setDragging(true)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (!dragOver) setDragOver(true)
+  }
+
+  const handleDragLeave = () => setDragOver(false)
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10)
+    if (!Number.isNaN(fromIdx)) moveDay(fromIdx, idx)
+  }
+
+  const handleDragEnd = () => {
+    setDragging(false)
+    setDragOver(false)
+  }
 
   const photos = day.day_photos || []
   const getPhoto = (slot) => photos.find(p => p.slot_index === slot) || null
@@ -16,8 +52,13 @@ export default function DayCard({ day, idx }) {
       toast.error('Upload photos in the Photos tab first!')
       return
     }
+    setPickerSearch('')
     setPickerTarget(target)
   }
+
+  const filteredLibrary = library.filter(p =>
+    (p.tag_name || '').toLowerCase().includes(pickerSearch.toLowerCase())
+  )
 
   const handlePickerSelect = async (photo) => {
     setPickerTarget(null)
@@ -55,10 +96,23 @@ export default function DayCard({ day, idx }) {
   }
 
   return (
-    <div className="day-card">
+    <div
+      className={`day-card ${dragging ? 'dragging' : ''} ${dragOver ? 'drag-over' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Header */}
       <div className="day-header" onClick={() => toggleDayOpen(idx)}>
         <div className="day-header-left">
+          <span
+            className="day-drag-handle"
+            draggable
+            title="Drag to reorder"
+            onClick={e => e.stopPropagation()}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >⠿</span>
           <div className="day-num">{idx + 1}</div>
           <input
             className="day-title-input"
@@ -148,6 +202,19 @@ export default function DayCard({ day, idx }) {
         {/* Themes */}
         <div className="field">
           <label>Themes</label>
+          <select
+            className="glass-input"
+            style={{ marginBottom: 8 }}
+            value=""
+            onChange={e => {
+              if (e.target.value) addTag('themes', e.target.value)
+            }}
+          >
+            <option value="">+ Select a theme to add...</option>
+            {THEME_OPTIONS.filter(t => !(day.themes || []).includes(t)).map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
           <div className="tag-input-wrap">
             {(day.themes || []).map((t, i) => (
               <span key={i} className="tag green">{t}
@@ -156,7 +223,7 @@ export default function DayCard({ day, idx }) {
             ))}
             <input
               className="glass-input"
-              placeholder="e.g. Adventure, Sightseeing..."
+              placeholder="Or type a custom theme & Enter..."
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ',') {
                   addTag('themes', e.target.value)
@@ -233,8 +300,19 @@ export default function DayCard({ day, idx }) {
               <h3>📸 Select from Library</h3>
               <button className="modal-close" onClick={() => setPickerTarget(null)}>✕</button>
             </div>
+            <div className="modal-search">
+              <input
+                className="glass-input"
+                autoFocus
+                placeholder="Search by name..."
+                value={pickerSearch}
+                onChange={e => setPickerSearch(e.target.value)}
+              />
+            </div>
             <div className="modal-body">
-              {library.map(p => (
+              {filteredLibrary.length === 0 ? (
+                <div className="picker-empty">No photos match &quot;{pickerSearch}&quot;.</div>
+              ) : filteredLibrary.map(p => (
                 <div key={p.id} className="picker-item" onClick={() => handlePickerSelect(p)}>
                   <img src={p.photo_url} alt={p.tag_name} />
                   <div className="picker-item-label">{p.tag_name}</div>
