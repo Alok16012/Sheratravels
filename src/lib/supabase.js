@@ -38,6 +38,7 @@ function createMockClient() {
     lead_notes:   JSON.parse(localStorage.getItem('crm_notes')         || '[]'),
     bookings:     JSON.parse(localStorage.getItem('crm_bookings')      || '[]'),
     payments:     JSON.parse(localStorage.getItem('crm_payments')      || '[]'),
+    app_users:    JSON.parse(localStorage.getItem('mock_app_users')    || '[]'),
   }
 
   const persist = (table) => {

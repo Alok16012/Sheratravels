@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
 import { saveCredentials, clearCredentials, getStoredCredentials, isConfigured } from '../lib/supabase'
+import { isAdmin } from '../lib/auth'
 
 const DEFAULT_COMPANY = {
   name: 'Shera Travels',
@@ -86,6 +88,26 @@ export default function Admin() {
       </div>
 
       <div className="admin-sections-grid">
+        {isAdmin() && (
+          <section className="glass-card settings-card">
+            <div className="settings-head">
+              <div className="settings-icon">🔐</div>
+              <div>
+                <h3>Users & Roles</h3>
+                <p className="text-dim">Create accounts and control per-module access.</p>
+              </div>
+            </div>
+            <div className="settings-form">
+              <p className="text-dim" style={{ fontSize: 13 }}>
+                Add team members, assign a role label, and give each one exactly the modules they need — or full admin access.
+              </p>
+              <div className="form-actions">
+                <Link to="/users" className="btn btn-primary">Manage Users</Link>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="glass-card settings-card">
           <div className="settings-head">
             <div className="settings-icon">🗄️</div>

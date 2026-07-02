@@ -1,20 +1,23 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { getSession, hasAccess, isAdmin, clearSession } from '../lib/auth'
 
 export default function MainLayout({ children, headerActions }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const session = getSession()
+  const admin = isAdmin()
 
   const handleLogout = () => {
-    localStorage.removeItem('shara_auth')
+    clearSession()
     toast.success('Logged out successfully')
     navigate('/login')
   }
 
-  const navGroups = [
+  const allNavGroups = [
     {
       label: 'Main',
       items: [
@@ -24,45 +27,46 @@ export default function MainLayout({ children, headerActions }) {
     {
       label: 'Sales & CRM',
       items: [
-        { path: '/leads', label: 'Leads', icon: '👥' },
-        { path: '/bookings', label: 'Bookings', icon: '📅' },
+        { path: '/leads', label: 'Leads', icon: '👥', module: 'leads' },
+        { path: '/bookings', label: 'Bookings', icon: '📅', module: 'bookings' },
       ],
     },
     {
       label: 'Operations',
       items: [
-        { path: '/itinerary', label: 'Itinerary', icon: '📋' },
-        { path: '/invoices', label: 'Invoices', icon: '🧾' },
+        { path: '/itinerary', label: 'Itinerary', icon: '📋', module: 'itinerary' },
+        { path: '/invoices', label: 'Invoices', icon: '🧾', module: 'invoices' },
       ],
     },
     {
       label: 'Resources',
       items: [
-        { path: '/hotels', label: 'Hotels', icon: '🏨' },
-        { path: '/cabs', label: 'Cabs', icon: '🚕' },
-        { path: '/photos', label: 'Photos', icon: '🖼️' },
+        { path: '/hotels', label: 'Hotels', icon: '🏨', module: 'hotels' },
+        { path: '/cabs', label: 'Cabs', icon: '🚕', module: 'cabs' },
+        { path: '/photos', label: 'Photos', icon: '🖼️', module: 'photos' },
       ],
     },
     {
       label: 'Admin',
       items: [
-        { path: '/income', label: 'Income', icon: '💰' },
-        { path: '/expenses', label: 'Expenses', icon: '📉' },
-        { path: '/audit-logs', label: 'Audit Logs', icon: '📜' },
-        { path: '/admin', label: 'Settings', icon: '⚙️' },
+        { path: '/income', label: 'Income', icon: '💰', module: 'income' },
+        { path: '/expenses', label: 'Expenses', icon: '📉', module: 'expenses' },
+        { path: '/audit-logs', label: 'Audit Logs', icon: '📜', module: 'audit_logs' },
+        { path: '/admin', label: 'Settings', icon: '⚙️', module: 'admin' },
+        ...(admin ? [{ path: '/users', label: 'Users & Roles', icon: '🔐' }] : []),
       ],
     },
   ]
 
+  const navGroups = allNavGroups
+    .map(g => ({ ...g, items: g.items.filter(item => !item.module || hasAccess(item.module)) }))
+    .filter(g => g.items.length > 0)
+
   const navItems = navGroups.flatMap(g => g.items)
 
-  const mobileNavItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/itinerary', label: 'Itinerary', icon: '📋' },
-    { path: '/leads', label: 'Leads', icon: '👥' },
-    { path: '/bookings', label: 'Bookings', icon: '📅' },
-    { path: '/admin', label: 'Settings', icon: '⚙️' },
-  ]
+  const mobileNavItems = navItems.filter(item =>
+    ['/', '/itinerary', '/leads', '/bookings', '/admin'].includes(item.path)
+  )
 
   return (
     <div className="layout-wrapper">
@@ -143,14 +147,14 @@ export default function MainLayout({ children, headerActions }) {
             </div>
             <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '14px', fontWeight: '700' }}>Admin User</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Super Admin</p>
+                <p style={{ fontSize: '14px', fontWeight: '700' }}>{session?.full_name || session?.username || 'User'}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{session?.is_admin ? 'Super Admin' : (session?.role || 'Staff')}</p>
               </div>
               <div style={{
                 width: 40, height: 40, background: 'var(--primary)',
                 borderRadius: '50%', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontWeight: '800', fontSize: '14px', color: '#fff'
-              }}>AD</div>
+              }}>{(session?.full_name || session?.username || 'U').slice(0, 2).toUpperCase()}</div>
             </div>
           </div>
         </header>

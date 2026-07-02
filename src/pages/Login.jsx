@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import bcrypt from 'bcryptjs'
 import loginBg from '../assets/login-bg.png'
 import { supabase } from '../lib/supabase'
+import { setSession } from '../lib/auth'
 
 export default function Login() {
   const [id, setId] = useState('')
@@ -10,22 +12,59 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate auth delay
-    setTimeout(() => {
-      if (id === 'admin' && pass === 'admin123') {
-        localStorage.setItem('shara_auth', 'true')
-        toast.success('Welcome back, Admin!')
-        supabase.from('audit_logs').insert([{ actor: 'Administrator', action: 'Login', details: `Logged in as ${id}` }])
-        navigate('/')
-      } else {
-        toast.error('Invalid ID or Password')
+    try {
+      const username = id.trim()
+      const { data: matches, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('username', username)
+      if (error) throw error
+
+      let user = matches?.[0] || null
+
+      // First-run bootstrap: if no users exist yet, the default admin/admin123
+      // credentials create the initial admin account automatically.
+      if (!user) {
+        const { data: anyUsers } = await supabase.from('app_users').select('id').limit(1)
+        if ((!anyUsers || anyUsers.length === 0) && username === 'admin' && pass === 'admin123') {
+          const password_hash = bcrypt.hashSync(pass, 10)
+          const { data: created, error: createErr } = await supabase
+            .from('app_users')
+            .insert([{
+              username: 'admin',
+              password_hash,
+              full_name: 'Administrator',
+              role: 'Admin',
+              is_admin: true,
+              permissions: {},
+              active: true,
+            }])
+            .select()
+          if (createErr) throw createErr
+          user = created?.[0] || null
+        }
       }
+
+      if (!user || !user.active || !bcrypt.compareSync(pass, user.password_hash)) {
+        toast.error('Invalid ID or Password')
+        setLoading(false)
+        return
+      }
+
+      setSession(user)
+      toast.success(`Welcome back, ${user.full_name || user.username}!`)
+      supabase.from('audit_logs').insert([{ actor: user.full_name || user.username, action: 'Login', details: `Logged in as ${user.username}` }])
+      navigate('/')
+    } catch (err) {
+      console.error('Login error:', err)
+      toast.error('Login failed. Please try again.')
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (
@@ -43,10 +82,10 @@ export default function Login() {
         
         <form onSubmit={handleLogin} className="login-form">
           <div className="login-field">
-            <label>ID</label>
-            <input 
-              type="text" 
-              placeholder="Enter admin ID"
+            <label>Username</label>
+            <input
+              type="text"
+              placeholder="Enter your username"
               value={id}
               onChange={e => setId(e.target.value)}
               required

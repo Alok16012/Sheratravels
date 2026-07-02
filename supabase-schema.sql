@@ -296,6 +296,28 @@ alter table expenses disable row level security;
 alter table audit_logs disable row level security;
 
 -- ═══════════════════════════════════════
+-- MIGRATION: User Management — accounts, roles & per-module permissions
+-- ═══════════════════════════════════════
+
+create table if not exists app_users (
+  id uuid primary key default gen_random_uuid(),
+  username text unique not null,
+  password_hash text not null,
+  full_name text not null,
+  role text default 'Staff',              -- free-text label, e.g. "Sales Executive"
+  is_admin boolean default false,          -- admins always have full, unrestricted access
+  permissions jsonb default '{}',          -- { [module_key]: true } — only used when is_admin = false
+  active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table app_users disable row level security;
+
+-- The first login with username "admin" / password "admin123" auto-creates
+-- the initial admin account if app_users is empty — no manual insert needed.
+
+-- ═══════════════════════════════════════
 -- STORAGE BUCKET
 -- Create manually in Supabase Dashboard:
 -- Storage → New Bucket → Name: "itinerary-photos" → Public: YES

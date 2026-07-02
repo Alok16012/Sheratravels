@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { PackageProvider } from './context/PackageContext'
 import { CRMProvider }     from './context/CRMContext'
 import { BookingProvider } from './context/BookingContext'
+import { isAdmin, hasAccess } from './lib/auth'
 
 // Each page is its own lazy chunk so the browser only downloads the code
 // for the page the user actually opens, instead of one giant bundle upfront.
@@ -31,6 +32,7 @@ const Photos    = lazy(() => import('./pages/Photos'))
 const Income    = lazy(() => import('./pages/Income'))
 const Expenses  = lazy(() => import('./pages/Expenses'))
 const AuditLogs = lazy(() => import('./pages/AuditLogs'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
 
 // Auth & Public
 const Login       = lazy(() => import('./pages/Login'))
@@ -46,9 +48,18 @@ function PageFallback() {
 // Styles
 import './styles/index.css'
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, module }) => {
   const isAuth = localStorage.getItem('shara_auth') === 'true'
-  return isAuth ? <MainLayout>{children}</MainLayout> : <Navigate to="/login" replace />
+  if (!isAuth) return <Navigate to="/login" replace />
+  if (module && !hasAccess(module)) return <Navigate to="/" replace />
+  return <MainLayout>{children}</MainLayout>
+}
+
+const AdminRoute = ({ children }) => {
+  const isAuth = localStorage.getItem('shara_auth') === 'true'
+  if (!isAuth) return <Navigate to="/login" replace />
+  if (!isAdmin()) return <Navigate to="/" replace />
+  return <MainLayout>{children}</MainLayout>
 }
 
 const StandaloneRoute = ({ children }) => {
@@ -70,24 +81,25 @@ export default function App() {
 
               {/* ── Protected Dashboard ── */}
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
+              <Route path="/itinerary" element={<ProtectedRoute module="itinerary"><Itinerary /></ProtectedRoute>} />
               <Route path="/editor/:id" element={<StandaloneRoute><Editor /></StandaloneRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute module="admin"><Admin /></ProtectedRoute>} />
+              <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
 
-              <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-              <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-              <Route path="/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
+              <Route path="/leads" element={<ProtectedRoute module="leads"><Leads /></ProtectedRoute>} />
+              <Route path="/bookings" element={<ProtectedRoute module="bookings"><Bookings /></ProtectedRoute>} />
+              <Route path="/bookings/:id" element={<ProtectedRoute module="bookings"><BookingDetail /></ProtectedRoute>} />
 
               {/* ── Operations / Resources / Admin ── */}
-              <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-              <Route path="/invoices/new" element={<ProtectedRoute><InvoiceGenerator /></ProtectedRoute>} />
-              <Route path="/invoices/:id/edit" element={<ProtectedRoute><InvoiceGenerator /></ProtectedRoute>} />
-              <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
-              <Route path="/cabs" element={<ProtectedRoute><Cabs /></ProtectedRoute>} />
-              <Route path="/photos" element={<ProtectedRoute><Photos /></ProtectedRoute>} />
-              <Route path="/income" element={<ProtectedRoute><Income /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute module="invoices"><Invoices /></ProtectedRoute>} />
+              <Route path="/invoices/new" element={<ProtectedRoute module="invoices"><InvoiceGenerator /></ProtectedRoute>} />
+              <Route path="/invoices/:id/edit" element={<ProtectedRoute module="invoices"><InvoiceGenerator /></ProtectedRoute>} />
+              <Route path="/hotels" element={<ProtectedRoute module="hotels"><Hotels /></ProtectedRoute>} />
+              <Route path="/cabs" element={<ProtectedRoute module="cabs"><Cabs /></ProtectedRoute>} />
+              <Route path="/photos" element={<ProtectedRoute module="photos"><Photos /></ProtectedRoute>} />
+              <Route path="/income" element={<ProtectedRoute module="income"><Income /></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute module="expenses"><Expenses /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute module="audit_logs"><AuditLogs /></ProtectedRoute>} />
             </Routes>
             </Suspense>
 
