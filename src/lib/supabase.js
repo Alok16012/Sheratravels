@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import toast from 'react-hot-toast'
 
 // Read from localStorage first (set via Admin page), fall back to env vars
 const storedUrl = localStorage.getItem('sb_url')
@@ -199,6 +200,20 @@ function resizeImage(file, maxDim = 1600, quality = 0.8) {
   })
 }
 
+// Warn the user only once per session that Storage isn't set up, so they don't
+// get spammed on every photo while still learning why saves may be slow/failing.
+let storageWarned = false
+function warnStorageFallback(reason) {
+  console.warn('Supabase storage unavailable, falling back to base64:', reason)
+  if (!storageWarned) {
+    storageWarned = true
+    toast.error(
+      "Storage bucket 'itinerary-photos' missing — photos are being embedded inline, which can make saves fail. Create a public bucket named 'itinerary-photos' in Supabase → Storage.",
+      { duration: 8000 }
+    )
+  }
+}
+
 // ── Helper: Upload image file to Supabase Storage and return public URL ────
 export async function uploadPhoto(file, folder = 'library') {
   if (!isConfigured) {
@@ -206,21 +221,25 @@ export async function uploadPhoto(file, folder = 'library') {
   }
   const resized = await resizeImage(file)
   const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
-  const { error } = await supabase.storage
-    .from('itinerary-photos')
-    .upload(fileName, resized, { upsert: false, contentType: 'image/jpeg' })
-  if (error) {
-    // Graceful fallback: if bucket is missing or RLS blocks upload,
-    // store the image as a compressed base64 data URL so the app keeps working.
-    const msg = (error.message || '').toLowerCase()
-    if (msg.includes('bucket') || msg.includes('not found') || msg.includes('row-level') || msg.includes('policy')) {
-      console.warn('Supabase storage unavailable, falling back to base64:', error.message)
+  try {
+    const { error } = await supabase.storage
+      .from('itinerary-photos')
+      .upload(fileName, resized, { upsert: false, contentType: 'image/jpeg' })
+    if (error) {
+      // Graceful fallback: bucket missing, RLS blocks upload, quota, etc.
+      // Store a compressed base64 data URL so the app keeps working, but flag it —
+      // base64 photos bloat every row save and can trigger "Failed to fetch".
+      warnStorageFallback(error.message)
       return compressImage(file)
     }
-    throw error
+    const { data: urlData } = supabase.storage.from('itinerary-photos').getPublicUrl(fileName)
+    return urlData.publicUrl
+  } catch (e) {
+    // Network-level failure (e.g. "TypeError: Failed to fetch") also falls back
+    // instead of hard-crashing the upload.
+    warnStorageFallback(e?.message || 'network error')
+    return compressImage(file)
   }
-  const { data: urlData } = supabase.storage.from('itinerary-photos').getPublicUrl(fileName)
-  return urlData.publicUrl
 }
 
 // ── Helper: Delete photo from storage ─────────────────────────────────────
