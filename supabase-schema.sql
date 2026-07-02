@@ -277,6 +277,17 @@ create table if not exists audit_logs (
   created_at timestamptz default now()
 );
 
+-- ═══════════════════════════════════════
+-- MIGRATION: Invoice Generator — bill-to details + line items
+-- ═══════════════════════════════════════
+alter table invoices add column if not exists client_gstin text;
+alter table invoices add column if not exists client_address text;
+alter table invoices add column if not exists client_phone text;
+alter table invoices add column if not exists client_state_code text;
+alter table invoices add column if not exists items jsonb default '[]';
+alter table invoices add column if not exists subtotal numeric default 0;
+alter table invoices add column if not exists tax_amount numeric default 0;
+
 alter table invoices disable row level security;
 alter table hotels disable row level security;
 alter table cabs disable row level security;

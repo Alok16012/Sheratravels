@@ -24,6 +24,7 @@ const Itinerary = lazy(() => import('./pages/Itinerary'))
 
 // Resources & Admin (placeholders)
 const Invoices  = lazy(() => import('./pages/Invoices'))
+const InvoiceGenerator = lazy(() => import('./pages/InvoiceGenerator'))
 const Hotels    = lazy(() => import('./pages/Hotels'))
 const Cabs      = lazy(() => import('./pages/Cabs'))
 const Photos    = lazy(() => import('./pages/Photos'))
@@ -79,6 +80,8 @@ export default function App() {
 
               {/* ── Operations / Resources / Admin ── */}
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+              <Route path="/invoices/new" element={<ProtectedRoute><InvoiceGenerator /></ProtectedRoute>} />
+              <Route path="/invoices/:id/edit" element={<ProtectedRoute><InvoiceGenerator /></ProtectedRoute>} />
               <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
               <Route path="/cabs" element={<ProtectedRoute><Cabs /></ProtectedRoute>} />
               <Route path="/photos" element={<ProtectedRoute><Photos /></ProtectedRoute>} />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -26,88 +27,11 @@ function StatusBadge({ status }) {
   )
 }
 
-function InvoiceModal({ invoice, onSave, onClose }) {
-  const [form, setForm] = useState(invoice || {
-    client_name: '',
-    amount: '',
-    status: 'unpaid',
-    issue_date: new Date().toISOString().slice(0, 10),
-    due_date: '',
-    notes: '',
-  })
-
-  const submit = () => {
-    if (!form.client_name?.trim()) {
-      toast.error('Client name is required')
-      return
-    }
-    onSave(form)
-  }
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content glass-card animate-fade" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{invoice ? 'Edit Invoice' : 'New Invoice'}</h3>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
-        </div>
-
-        <div className="modal-body-custom">
-          <div className="form-row">
-            <div className="form-field">
-              <label>Client Name</label>
-              <input className="glass-input" value={form.client_name} onChange={e => setForm({ ...form, client_name: e.target.value })} placeholder="Traveler Name" />
-            </div>
-            <div className="form-field">
-              <label>Amount (₹)</label>
-              <input className="glass-input" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="e.g. 25000" />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label>Status</label>
-              <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                <option value="unpaid">Unpaid</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label>Issue Date</label>
-              <input className="glass-input" type="date" value={form.issue_date || ''} onChange={e => setForm({ ...form, issue_date: e.target.value })} />
-            </div>
-            <div className="form-field">
-              <label>Due Date</label>
-              <input className="glass-input" type="date" value={form.due_date || ''} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label>Notes</label>
-            <textarea className="glass-input" rows={3} value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes..." />
-          </div>
-        </div>
-
-        <div className="modal-footer-custom">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={submit}>Save Invoice</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function Invoices() {
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-  const [showAdd, setShowAdd] = useState(false)
-  const [editingInvoice, setEditingInvoice] = useState(null)
 
   useEffect(() => { fetchInvoices() }, [])
 
@@ -124,43 +48,6 @@ export default function Invoices() {
       setInvoices(data || [])
     }
     setLoading(false)
-  }
-
-  const addInvoice = async (form) => {
-    const nextNumber = invoices.length + 1
-    const invoice_number = `INV-${String(nextNumber).padStart(4, '0')}`
-    const payload = {
-      ...form,
-      invoice_number,
-      amount: Number(form.amount) || 0,
-      due_date: form.due_date || null,
-    }
-    const { error } = await supabase.from('invoices').insert([payload])
-    if (error) {
-      toast.error('Failed to create invoice')
-      console.error(error)
-    } else {
-      toast.success('Invoice created')
-      await fetchInvoices()
-    }
-  }
-
-  const updateInvoice = async (id, form) => {
-    const payload = {
-      ...form,
-      amount: Number(form.amount) || 0,
-      due_date: form.due_date || null,
-    }
-    delete payload.id
-    delete payload.created_at
-    const { error } = await supabase.from('invoices').update(payload).eq('id', id)
-    if (error) {
-      toast.error('Failed to update invoice')
-      console.error(error)
-    } else {
-      toast.success('Invoice updated')
-      await fetchInvoices()
-    }
   }
 
   const deleteInvoice = async (id) => {
@@ -184,16 +71,6 @@ export default function Invoices() {
       toast.success('Marked as paid')
       await fetchInvoices()
     }
-  }
-
-  const handleSave = async (form) => {
-    if (editingInvoice) {
-      await updateInvoice(editingInvoice.id, form)
-    } else {
-      await addInvoice(form)
-    }
-    setEditingInvoice(null)
-    setShowAdd(false)
   }
 
   const filteredInvoices = invoices.filter(inv => {
@@ -224,9 +101,9 @@ export default function Invoices() {
           <h1 className="text-gradient">Invoices</h1>
           <p className="text-muted">{invoices.length} invoices • ₹{unpaidAmount.toLocaleString()} unpaid</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+        <Link to="/invoices/new" className="btn btn-primary">
           + New Invoice
-        </button>
+        </Link>
       </div>
 
       <div className="stats-grid">
@@ -260,7 +137,7 @@ export default function Invoices() {
           <div className="empty-state-icon">🧾</div>
           <h2>No invoices found</h2>
           <p>Create your first invoice to get started</p>
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ New Invoice</button>
+          <Link to="/invoices/new" className="btn btn-primary">+ New Invoice</Link>
         </div>
       ) : (
         <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -291,7 +168,7 @@ export default function Invoices() {
                         {inv.status !== 'paid' && (
                           <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => markPaid(inv.id)} title="Mark Paid">✅</button>
                         )}
-                        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => setEditingInvoice(inv)} title="Edit">✏️</button>
+                        <Link className="btn btn-ghost" style={{ padding: 8 }} to={`/invoices/${inv.id}/edit`} title="Edit">✏️</Link>
                         <button className="btn btn-ghost" style={{ padding: 8, color: '#EF4444' }} onClick={() => deleteInvoice(inv.id)} title="Delete">🗑️</button>
                       </div>
                     </td>
@@ -301,14 +178,6 @@ export default function Invoices() {
             </table>
           </div>
         </div>
-      )}
-
-      {(showAdd || editingInvoice) && (
-        <InvoiceModal
-          invoice={editingInvoice}
-          onSave={handleSave}
-          onClose={() => { setShowAdd(false); setEditingInvoice(null) }}
-        />
       )}
 
       <style jsx>{`
@@ -341,76 +210,6 @@ export default function Invoices() {
         .filter-row { margin-bottom: 20px; }
         .search-input { max-width: 320px; margin-bottom: 12px; }
 
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.7);
-          backdrop-filter: blur(4px);
-          z-index: 1000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 16px;
-        }
-        .modal-content {
-          width: 100%;
-          max-width: 500px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px 24px;
-          border-bottom: 1px solid var(--border-glass);
-        }
-        .modal-header h3 { font-size: 18px; font-weight: 800; }
-        .modal-close-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: #F1F5F9;
-          border: none;
-          color: var(--text-dim);
-          cursor: pointer;
-          font-size: 14px;
-        }
-        .modal-close-btn:hover {
-          background: rgba(239,68,68,0.2);
-          color: #ef4444;
-        }
-        .modal-body-custom {
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        .form-field {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .form-field label {
-          font-size: 11px;
-          font-weight: 700;
-          color: var(--text-muted);
-          text-transform: uppercase;
-        }
-        .modal-footer-custom {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          padding: 16px 24px;
-          border-top: 1px solid var(--border-glass);
-          background: #F8FAFC;
-        }
-
         @media (max-width: 1024px) {
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -433,15 +232,8 @@ export default function Invoices() {
             -webkit-overflow-scrolling: touch;
           }
           .filter-pill { white-space: nowrap; }
-
-          .modal-content { max-height: 95vh; }
-          .modal-header { padding: 16px 20px; }
-          .modal-header h3 { font-size: 16px; }
-          .modal-body-custom { padding: 16px 20px; }
-          .modal-footer-custom { padding: 12px 20px; }
         }
         @media (max-width: 480px) {
-          .form-row { grid-template-columns: 1fr; }
           .stats-grid { grid-template-columns: 1fr; }
         }
       `}</style>
