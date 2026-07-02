@@ -1,5 +1,5 @@
 // @refresh reset
-import React, { createContext, useContext, useReducer, useCallback } from 'react'
+import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -47,14 +47,21 @@ function warnUnconfigured() {
 
 export function CRMProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const leadsLoadedRef = useRef(false)
 
-  const fetchLeads = useCallback(async () => {
+  // `force` re-fetches even if leads are already cached — pass true after
+  // out-of-band changes. Otherwise we skip refetching on every remount
+  // (e.g. navigating Home -> Leads -> Bookings -> Home) since the provider
+  // already persists this data across route changes.
+  const fetchLeads = useCallback(async (force = false) => {
+    if (leadsLoadedRef.current && !force) return
     dispatch({ type: 'SET_LOADING', payload: true })
     try {
       const { data, error } = await supabase
         .from('leads').select('*').order('created_at', { ascending: false })
       if (error) throw error
       dispatch({ type: 'SET_LEADS', payload: data || [] })
+      leadsLoadedRef.current = true
     } catch (err) {
       console.error('fetchLeads error:', err)
       if (isConfigured) toast.error(`Load failed: ${err.message || 'check RLS/schema'}`)

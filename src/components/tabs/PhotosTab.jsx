@@ -54,7 +54,7 @@ export default function PhotosTab({ active }) {
           </div>
         ) : library.map(p => (
           <div key={p.id} className="lib-item">
-            <img src={p.photo_url} alt={p.tag_name} />
+            <img src={p.photo_url} alt={p.tag_name} loading="lazy" />
             <div className="lib-item-info">
               <span className="lib-item-name">{p.tag_name}</span>
               <span className="lib-item-type">{p.tag_type === 'hotel' ? '🏨' : '📍'} {p.tag_type}</span>

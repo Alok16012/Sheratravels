@@ -141,7 +141,7 @@ export default function DayCard({ day, idx }) {
                 <div key={slot} className="photo-slot" onClick={() => openPicker(`slot-${slot}`)}>
                   {ph ? (
                     <>
-                      <img src={ph.photo_url} alt={ph.tag_name} />
+                      <img src={ph.photo_url} alt={ph.tag_name} loading="lazy" />
                       <div className="photo-label">{ph.tag_name || ''}</div>
                       <button className="photo-remove" onClick={e => { e.stopPropagation(); removeDayPhoto(idx, slot) }}>✕</button>
                     </>
@@ -282,7 +282,7 @@ export default function DayCard({ day, idx }) {
             onClick={() => openPicker('hotel')}>
             {day.hotel_photo_url ? (
               <>
-                <img src={day.hotel_photo_url} alt="Hotel" />
+                <img src={day.hotel_photo_url} alt="Hotel" loading="lazy" />
                 <button className="photo-remove" onClick={e => { e.stopPropagation(); updateDay(idx, 'hotel_photo_url', null) }}>✕</button>
               </>
             ) : (
@@ -314,7 +314,7 @@ export default function DayCard({ day, idx }) {
                 <div className="picker-empty">No photos match &quot;{pickerSearch}&quot;.</div>
               ) : filteredLibrary.map(p => (
                 <div key={p.id} className="picker-item" onClick={() => handlePickerSelect(p)}>
-                  <img src={p.photo_url} alt={p.tag_name} />
+                  <img src={p.photo_url} alt={p.tag_name} loading="lazy" />
                   <div className="picker-item-label">{p.tag_name}</div>
                 </div>
               ))}

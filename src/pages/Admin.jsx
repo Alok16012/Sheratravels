@@ -268,7 +268,7 @@ export default function Admin() {
         .table-inline-input {
           background: none;
           border: none;
-          color: #fff;
+          color: var(--text-bright);
           font-family: inherit;
           font-size: 14px;
           width: 100%;

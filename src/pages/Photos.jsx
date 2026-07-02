@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { usePackage } from '../context/PackageContext'
 import toast from 'react-hot-toast'
 
+const PAGE_SIZE = 20
+
 function UploadModal({ onSave, onClose }) {
   const [file, setFile] = useState(null)
   const [tagName, setTagName] = useState('')
@@ -66,6 +68,7 @@ export default function Photos() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showUpload, setShowUpload] = useState(false)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     const load = async () => {
@@ -101,6 +104,12 @@ export default function Photos() {
     const q = search.toLowerCase()
     return (p.tag_name || '').toLowerCase().includes(q)
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredLibrary.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pagedLibrary = filteredLibrary.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeStart = filteredLibrary.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLibrary.length)
 
   const typeColors = {
     hotel: { color: '#2563EB', bg: 'rgba(37, 99, 235, 0.12)' },
@@ -146,7 +155,7 @@ export default function Photos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLibrary.map(photo => {
+                  {pagedLibrary.map(photo => {
                     const tc = typeColors[photo.tag_type] || typeColors.location
                     return (
                       <tr key={photo.id}>
@@ -154,6 +163,7 @@ export default function Photos() {
                           <img
                             src={photo.photo_url}
                             alt={photo.tag_name || 'photo'}
+                            loading="lazy"
                             style={{ width: 50, height: 50, borderRadius: 8, objectFit: 'cover' }}
                           />
                         </td>
@@ -179,6 +189,16 @@ export default function Photos() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid var(--border-glass)', flexWrap: 'wrap', gap: 12 }}>
+              <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Showing {rangeStart}–{rangeEnd} of {filteredLibrary.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12.5 }} disabled={currentPage === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
+                <span style={{ fontSize: 12.5, color: 'var(--text-dim)', padding: '0 6px' }}>Page {currentPage} of {totalPages}</span>
+                <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12.5 }} disabled={currentPage === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
+              </div>
             </div>
           )}
         </div>

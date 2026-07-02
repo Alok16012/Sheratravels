@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback } from 'react'
+import { createContext, useContext, useReducer, useCallback, useRef } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { sendNewBookingEmail, sendReceiptEmail } from '../lib/email'
 import toast from 'react-hot-toast'
@@ -51,15 +51,21 @@ function reducer(state, action) {
 // ── Provider ──────────────────────────────────────────────
 export function BookingProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initial)
+  const bookingsLoadedRef = useRef(false)
 
   // ── Fetch all bookings ──────────────────────────────────
-  const fetchBookings = useCallback(async () => {
+  // `force` re-fetches even if bookings are already cached — the provider
+  // persists state across route changes, so plain remounts (e.g. navigating
+  // Home -> Bookings -> Home) should reuse cached data instead of refetching.
+  const fetchBookings = useCallback(async (force = false) => {
+    if (bookingsLoadedRef.current && !force) return
     dispatch({ type: 'SET_LOADING', payload: true })
     try {
       const { data, error } = await supabase
         .from('bookings').select('*').order('created_at', { ascending: false })
       if (error) throw error
       dispatch({ type: 'SET_BOOKINGS', payload: data || [] })
+      bookingsLoadedRef.current = true
     } catch (err) {
       console.error('fetchBookings error:', err)
       if (isConfigured) toast.error(`Load failed: ${err.message || 'check RLS/schema'}`)

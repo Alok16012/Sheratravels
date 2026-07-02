@@ -304,7 +304,7 @@ export default function Bookings() {
           font-size: 11px;
           font-weight: 700;
           padding: 4px 10px;
-          background: rgba(255,255,255,0.05);
+          background: #F1F5F9;
           border-radius: 20px;
         }
         .view-btn {
@@ -312,8 +312,8 @@ export default function Bookings() {
           height: 36px;
           border-radius: 10px;
           border: 1px solid var(--border-glass);
-          background: rgba(255,255,255,0.03);
-          color: #fff;
+          background: #F1F5F9;
+          color: var(--text-bright);
           cursor: pointer;
           font-size: 14px;
           flex-shrink: 0;

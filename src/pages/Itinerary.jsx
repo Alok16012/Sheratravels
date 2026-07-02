@@ -5,11 +5,14 @@ import { useCRM } from '../context/CRMContext'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
+const PAGE_SIZE = 20
+
 export default function Itinerary() {
   const navigate = useNavigate()
   const { packages, fetchPackages, createNewPackage, loading } = usePackage()
   const { leads, fetchLeads } = useCRM()
   const [clientMap, setClientMap] = useState({})
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     fetchPackages()
@@ -24,6 +27,15 @@ export default function Itinerary() {
     })
     setClientMap(map)
   }, [packages])
+
+  const totalPages = Math.max(1, Math.ceil(packages.length / PAGE_SIZE))
+  // Derive the clamped page directly during render (no effect needed) so it
+  // self-corrects if the list shrinks below the current page, e.g. after a delete.
+  const currentPage = Math.min(page, totalPages)
+
+  const pagedPackages = packages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeStart = packages.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, packages.length)
 
   const handleClientChange = async (pkgId, clientName) => {
     setClientMap(prev => ({ ...prev, [pkgId]: clientName }))
@@ -89,7 +101,7 @@ export default function Itinerary() {
                 </tr>
               </thead>
               <tbody>
-                {packages.map(pkg => (
+                {pagedPackages.map(pkg => (
                   <tr key={pkg.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -125,6 +137,38 @@ export default function Itinerary() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 20px', borderTop: '1px solid var(--border-glass)', flexWrap: 'wrap', gap: 12,
+            }}>
+              <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
+                Showing {rangeStart}–{rangeEnd} of {packages.length}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: '6px 12px', fontSize: 12.5 }}
+                  disabled={currentPage === 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  ← Prev
+                </button>
+                <span style={{ fontSize: 12.5, color: 'var(--text-dim)', padding: '0 6px' }}>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: '6px 12px', fontSize: 12.5 }}
+                  disabled={currentPage === totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -253,7 +253,7 @@ export default function BookingDetail() {
         
         .progress-section { display: flex; flex-direction: column; gap: 12px; }
         .progress-meta { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; }
-        .progress-track { height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden; }
+        .progress-track { height: 10px; background: #F1F5F9; border-radius: 5px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), #8b5cf6); border-radius: 5px; }
 
         .detail-workspace { display: grid; grid-template-columns: 280px 1fr; gap: 32px; }
@@ -274,8 +274,8 @@ export default function BookingDetail() {
         .text-warning { color: #f59e0b; }
         .badge-mini { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
 
-        .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; transition: var(--transition); }
-        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-glass); background: #F1F5F9; color: var(--text-bright); cursor: pointer; transition: var(--transition); }
+        .icon-btn:hover { background: #E2E8F0; }
       `}</style>
     </div>
   )

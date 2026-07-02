@@ -442,7 +442,13 @@ body {
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* End on `transform: none` (not translateY(0)) so the animation doesn't
+     leave a lingering transform on the element once it finishes. A non-`none`
+     transform value creates a new containing block for `position: fixed`
+     descendants, which was hijacking modal overlays (e.g. Edit Lead) nested
+     inside `.page-workspace.animate-fade` — they were centering against the
+     content column instead of the actual browser viewport. */
+  to { opacity: 1; transform: none; }
 }
 
 /* Scrollbar Style */

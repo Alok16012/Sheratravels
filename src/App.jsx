@@ -1,38 +1,46 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { PackageProvider } from './context/PackageContext'
 import { CRMProvider }     from './context/CRMContext'
 import { BookingProvider } from './context/BookingContext'
 
+// Each page is its own lazy chunk so the browser only downloads the code
+// for the page the user actually opens, instead of one giant bundle upfront.
+
 // Itinerary Maker pages
-import Home    from './pages/Home'
-import Editor  from './pages/Editor'
-import Admin   from './pages/Admin'
+const Home    = lazy(() => import('./pages/Home'))
+const Editor  = lazy(() => import('./pages/Editor'))
+const Admin   = lazy(() => import('./pages/Admin'))
 
 // CRM pages
-import Dashboard    from './pages/crm/Dashboard'
-import Leads        from './pages/crm/Leads'
-import Bookings     from './pages/crm/Bookings'
-import BookingDetail from './pages/crm/BookingDetail'
+const Dashboard     = lazy(() => import('./pages/crm/Dashboard'))
+const Leads         = lazy(() => import('./pages/crm/Leads'))
+const Bookings      = lazy(() => import('./pages/crm/Bookings'))
+const BookingDetail = lazy(() => import('./pages/crm/BookingDetail'))
 
 // Itinerary listing
-import Itinerary from './pages/Itinerary'
+const Itinerary = lazy(() => import('./pages/Itinerary'))
 
 // Resources & Admin (placeholders)
-import Invoices  from './pages/Invoices'
-import Hotels    from './pages/Hotels'
-import Cabs      from './pages/Cabs'
-import Photos    from './pages/Photos'
-import Income    from './pages/Income'
-import Expenses  from './pages/Expenses'
-import AuditLogs from './pages/AuditLogs'
+const Invoices  = lazy(() => import('./pages/Invoices'))
+const Hotels    = lazy(() => import('./pages/Hotels'))
+const Cabs      = lazy(() => import('./pages/Cabs'))
+const Photos    = lazy(() => import('./pages/Photos'))
+const Income    = lazy(() => import('./pages/Income'))
+const Expenses  = lazy(() => import('./pages/Expenses'))
+const AuditLogs = lazy(() => import('./pages/AuditLogs'))
 
 // Auth & Public
-import Login       from './pages/Login'
-import BookingForm from './pages/BookingForm'
+const Login       = lazy(() => import('./pages/Login'))
+const BookingForm = lazy(() => import('./pages/BookingForm'))
 
 // Layout
 import MainLayout from './components/MainLayout'
+
+function PageFallback() {
+  return <div className="loading-state"><div className="spinner" /></div>
+}
 
 // Styles
 import './styles/index.css'
@@ -53,6 +61,7 @@ export default function App() {
       <PackageProvider>
         <CRMProvider>
           <BookingProvider>
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* ── Public ── */}
               <Route path="/login" element={<Login />} />
@@ -77,6 +86,7 @@ export default function App() {
               <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
               <Route path="/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             </Routes>
+            </Suspense>
 
             <Toaster
               position="bottom-center"

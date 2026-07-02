@@ -54,12 +54,21 @@ function reducer(state, action) {
 export function PackageProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const saveTimerRef = useRef(null)
+  const packagesLoadedRef = useRef(false)
+  const libraryLoadedRef = useRef(false)
 
   // ── PACKAGES ──────────────────────────────
-  const fetchPackages = useCallback(async () => {
+  // `force` re-fetches even if packages are already cached — the provider
+  // persists state across route changes, so plain remounts (e.g. navigating
+  // Home -> Itinerary -> Home) should reuse cached data instead of refetching.
+  const fetchPackages = useCallback(async (force = false) => {
+    if (packagesLoadedRef.current && !force) return
     dispatch({ type: 'SET_LOADING', payload: true })
     const { data, error } = await supabase.from('packages').select('*').order('created_at', { ascending: false })
-    if (!error) dispatch({ type: 'SET_PACKAGES', payload: data || [] })
+    if (!error) {
+      dispatch({ type: 'SET_PACKAGES', payload: data || [] })
+      packagesLoadedRef.current = true
+    }
     dispatch({ type: 'SET_LOADING', payload: false })
   }, [])
 
@@ -278,9 +287,11 @@ export function PackageProvider({ children }) {
   }, [state.days])
 
   // ── PHOTO LIBRARY ─────────────────────
-  const fetchLibrary = useCallback(async () => {
+  const fetchLibrary = useCallback(async (force = false) => {
+    if (libraryLoadedRef.current && !force) return
     const { data } = await supabase.from('photo_library').select('*').order('created_at', { ascending: false })
     dispatch({ type: 'SET_LIBRARY', payload: data || [] })
+    libraryLoadedRef.current = true
   }, [])
 
   const uploadToLibrary = useCallback(async (file, tagType, tagName) => {
