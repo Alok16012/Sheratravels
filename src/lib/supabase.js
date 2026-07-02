@@ -170,16 +170,44 @@ function compressImage(file) {
   })
 }
 
+// ── Helper: Resize image to a reasonable display size before upload, so
+// thumbnails don't require downloading multi-MB camera originals ──────────
+function resizeImage(file, maxDim = 1600, quality = 0.8) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      let w = img.naturalWidth
+      let h = img.naturalHeight
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim }
+        else { w = Math.round(w * maxDim / h); h = maxDim }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(objectUrl)
+      canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(file)
+    }
+    img.src = objectUrl
+  })
+}
+
 // ── Helper: Upload image file to Supabase Storage and return public URL ────
 export async function uploadPhoto(file, folder = 'library') {
   if (!isConfigured) {
     return compressImage(file)
   }
-  const ext = file.name.split('.').pop()
-  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`
+  const resized = await resizeImage(file)
+  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
   const { error } = await supabase.storage
     .from('itinerary-photos')
-    .upload(fileName, file, { upsert: false })
+    .upload(fileName, resized, { upsert: false, contentType: 'image/jpeg' })
   if (error) {
     // Graceful fallback: if bucket is missing or RLS blocks upload,
     // store the image as a compressed base64 data URL so the app keeps working.
