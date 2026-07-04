@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react'
 // Triggering fresh Vercel build with clean code
 import { supabase, uploadPhoto, deletePhoto } from '../lib/supabase'
+import { getSession } from '../lib/auth'
 import toast from 'react-hot-toast'
 
 const PackageContext = createContext(null)
@@ -64,7 +65,14 @@ export function PackageProvider({ children }) {
   const fetchPackages = useCallback(async (force = false) => {
     if (packagesLoadedRef.current && !force) return
     dispatch({ type: 'SET_LOADING', payload: true })
-    const { data, error } = await supabase.from('packages').select('*').order('created_at', { ascending: false })
+    // Ownership scoping: admins see every itinerary; everyone else sees only
+    // the ones they created (created_by = their user id).
+    const session = getSession()
+    let query = supabase.from('packages').select('*').order('created_at', { ascending: false })
+    if (session && !session.is_admin) {
+      query = query.eq('created_by', session.id)
+    }
+    const { data, error } = await query
     if (!error) {
       dispatch({ type: 'SET_PACKAGES', payload: data || [] })
       packagesLoadedRef.current = true
@@ -79,6 +87,16 @@ export function PackageProvider({ children }) {
       supabase.from('prices').select('*').eq('package_id', id).order('sort_order'),
       supabase.from('days').select('*, day_photos(*)').eq('package_id', id).order('sort_order'),
     ])
+    // Ownership guard: a non-admin must not open an itinerary created by
+    // someone else, even via a direct /editor/:id URL.
+    const session = getSession()
+    const pkg = pkgRes.data
+    if (!pkgRes.error && pkg && session && !session.is_admin && pkg.created_by && pkg.created_by !== session.id) {
+      toast.error("You don't have access to this itinerary")
+      dispatch({ type: 'SET_CURRENT_PACKAGE', payload: null })
+      dispatch({ type: 'SET_LOADING', payload: false })
+      return
+    }
     if (!pkgRes.error) dispatch({ type: 'SET_CURRENT_PACKAGE', payload: pkgRes.data })
     if (!pricesRes.error) dispatch({ type: 'SET_PRICES', payload: pricesRes.data || [] })
     if (!daysRes.error) dispatch({ type: 'SET_DAYS', payload: daysRes.data || [] })
@@ -102,6 +120,10 @@ export function PackageProvider({ children }) {
     const pkgToInsert = { ...newPkg }
     delete pkgToInsert.id           // Let DB generate UUID
     delete pkgToInsert.company_gst  // Exclude until DB column is confirmed
+
+    // Stamp the creator so ownership scoping can filter itineraries per-user.
+    const session = getSession()
+    if (session?.id) pkgToInsert.created_by = session.id
 
     dispatch({ type: 'SET_SAVING', payload: true })
     const { data, error } = await supabase.from('packages').insert([pkgToInsert]).select().single()

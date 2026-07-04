@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import bcrypt from 'bcryptjs'
 import loginBg from '../assets/login-bg.png'
@@ -10,7 +9,6 @@ export default function Login() {
   const [id, setId] = useState('')
   const [pass, setPass] = useState('')
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -58,7 +56,9 @@ export default function Login() {
       setSession(user)
       toast.success(`Welcome back, ${user.full_name || user.username}!`)
       supabase.from('audit_logs').insert([{ actor: user.full_name || user.username, action: 'Login', details: `Logged in as ${user.username}` }])
-      navigate('/')
+      // Full reload (not SPA nav) so all in-memory context — including the
+      // per-user itinerary cache — resets cleanly for the new user.
+      window.location.href = '/'
     } catch (err) {
       console.error('Login error:', err)
       toast.error('Login failed. Please try again.')
