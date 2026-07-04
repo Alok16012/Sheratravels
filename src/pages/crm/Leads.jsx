@@ -146,11 +146,24 @@ function LeadModal({ lead, onSave, onClose }) {
               <input className="glass-input" type="date" value={form.travel_date} onChange={e => setForm({...form, travel_date: e.target.value})} />
             </div>
             <div className="form-field">
-              <label>Stage</label>
-              <select className="glass-input" value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
-                {LEAD_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              <label>No. of Travelers (Pax)</label>
+              <select
+                className="glass-input"
+                value={(form.adults || 0) + (form.children || 0) + (form.infants || 0) || 1}
+                onChange={e => setForm({ ...form, adults: Number(e.target.value), children: 0, infants: 0 })}
+              >
+                {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} Pax</option>
+                ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-field">
+            <label>Stage</label>
+            <select className="glass-input" value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
+              {LEAD_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
           </div>
           
           <div className="form-field">
