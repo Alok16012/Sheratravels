@@ -30,8 +30,14 @@ const GST_STATE_CODES = {
 
 const ITEM_PRESETS = ['Tour Package', 'Hotel Accommodation', 'Cab / Transport', 'Houseboat Stay', 'Other Services']
 
+const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque']
+
 function newItem(description = '') {
   return { id: crypto.randomUUID(), description, hsn: '', qty: 1, rate: '', discount: '', cgst: '', sgst: '', igst: '' }
+}
+
+function newPayment() {
+  return { id: crypto.randomUUID(), date: new Date().toISOString().slice(0, 10), amount: '', mode: 'Cash', reference: '' }
 }
 
 function computeItem(item) {
@@ -61,6 +67,9 @@ export default function InvoiceGenerator() {
 
   const [client, setClient] = useState({ name: '', gstin: '', phone: '', address: '', stateCode: '' })
   const [items, setItems] = useState([newItem('Tour Package')])
+  const [payments, setPayments] = useState([])
+  const [draftPayment, setDraftPayment] = useState(newPayment())
+  const [receipt, setReceipt] = useState(null) // payment currently being printed as a receipt
 
   useEffect(() => {
     if (!id) {
@@ -91,6 +100,7 @@ export default function InvoiceGenerator() {
         stateCode: data.client_state_code || '',
       })
       setItems(Array.isArray(data.items) && data.items.length ? data.items : [newItem()])
+      setPayments(Array.isArray(data.payments) ? data.payments : [])
       setLoading(false)
     }
     load()
@@ -113,6 +123,47 @@ export default function InvoiceGenerator() {
   const taxAmount = computed.reduce((s, it) => s + it.cgstAmt + it.sgstAmt + it.igstAmt, 0)
   const grandTotal = subtotal + taxAmount
 
+  // ── Payments / balance ──────────────────────────────────────────────
+  const amountPaid = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const balanceDue = Math.max(0, grandTotal - amountPaid)
+  // Effective status is driven by payments once any money is recorded:
+  // fully covered → paid, some received → partial, otherwise the manual pick.
+  const effectiveStatus = amountPaid > 0
+    ? (balanceDue <= 0 ? 'paid' : 'partial')
+    : status
+
+  const addPayment = () => {
+    const amt = Number(draftPayment.amount) || 0
+    if (amt <= 0) { toast.error('Enter a payment amount'); return }
+    setPayments(list => [...list, { ...draftPayment, amount: amt }])
+    setDraftPayment(newPayment())
+  }
+  const removePayment = (pid) => setPayments(list => list.filter(p => p.id !== pid))
+
+  const downloadReceipt = async (payment) => {
+    setReceipt(payment)
+    // Let the hidden receipt template render before capturing it.
+    await new Promise(r => setTimeout(r, 80))
+    const genToastId = toast.loading('Generating receipt...')
+    try {
+      const el = document.getElementById('receipt-preview')
+      const canvas = await html2canvas(el, { useCORS: true, scale: 2, logging: false, backgroundColor: '#ffffff' })
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const imgH = (canvas.height * pageW) / canvas.width
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageW, imgH)
+      pdf.save(`Receipt - ${invoiceNumber || 'INV'} - ${client.name}.pdf`)
+      toast.dismiss(genToastId)
+      toast.success('Receipt downloaded!')
+    } catch (err) {
+      toast.dismiss(genToastId)
+      toast.error('Could not generate receipt. Try again.')
+      console.error('Receipt generation error:', err)
+    } finally {
+      setReceipt(null)
+    }
+  }
+
   const saveAndDownload = async () => {
     if (!client.name.trim()) {
       toast.error('Client / company name is required')
@@ -130,9 +181,11 @@ export default function InvoiceGenerator() {
         client_state_code: client.stateCode || null,
         issue_date: issueDate || null,
         due_date: dueDate || null,
-        status,
+        status: effectiveStatus,
         notes,
         items,
+        payments,
+        amount_paid: amountPaid,
         subtotal,
         tax_amount: taxAmount,
         amount: grandTotal,
@@ -234,6 +287,7 @@ export default function InvoiceGenerator() {
                 <label>Status</label>
                 <select className="glass-input" value={status} onChange={e => setStatus(e.target.value)}>
                   <option value="unpaid">Unpaid</option>
+                  <option value="partial">Partial</option>
                   <option value="paid">Paid</option>
                   <option value="overdue">Overdue</option>
                 </select>
@@ -306,6 +360,69 @@ export default function InvoiceGenerator() {
               </div>
             ))}
             <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => addItem()}>+ Add Line Item</button>
+          </div>
+
+          <div className="glass-card ig-card">
+            <h3>Payments Received</h3>
+
+            <div className="pay-summary">
+              <div className="pay-summary-cell">
+                <span>Grand Total</span>
+                <strong>{fmt(grandTotal)}</strong>
+              </div>
+              <div className="pay-summary-cell">
+                <span>Paid</span>
+                <strong style={{ color: '#059669' }}>{fmt(amountPaid)}</strong>
+              </div>
+              <div className="pay-summary-cell">
+                <span>Balance Due</span>
+                <strong style={{ color: balanceDue > 0 ? '#B45309' : '#059669' }}>{fmt(balanceDue)}</strong>
+              </div>
+            </div>
+
+            {payments.length > 0 && (
+              <div className="pay-list">
+                {payments.map((p) => (
+                  <div key={p.id} className="pay-row">
+                    <div className="pay-row-main">
+                      <span className="pay-amt">{fmt(p.amount)}</span>
+                      <span className="pay-meta">
+                        {p.date ? new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
+                        {' · '}{p.mode}{p.reference ? ` · ${p.reference}` : ''}
+                      </span>
+                    </div>
+                    <div className="pay-row-actions">
+                      <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => downloadReceipt(p)} title="Download receipt">🧾 Receipt</button>
+                      <button className="pay-remove" onClick={() => removePayment(p.id)} title="Remove">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pay-add">
+              <div className="ig-item-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: 0 }}>
+                <div className="form-field">
+                  <label>Amount (₹)</label>
+                  <input className="glass-input" type="number" value={draftPayment.amount} onChange={e => setDraftPayment(d => ({ ...d, amount: e.target.value }))} placeholder="e.g. 20" />
+                </div>
+                <div className="form-field">
+                  <label>Date</label>
+                  <input className="glass-input" type="date" value={draftPayment.date} onChange={e => setDraftPayment(d => ({ ...d, date: e.target.value }))} />
+                </div>
+                <div className="form-field">
+                  <label>Mode</label>
+                  <select className="glass-input" value={draftPayment.mode} onChange={e => setDraftPayment(d => ({ ...d, mode: e.target.value }))}>
+                    {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>Reference / Note</label>
+                  <input className="glass-input" value={draftPayment.reference} onChange={e => setDraftPayment(d => ({ ...d, reference: e.target.value }))} placeholder="UPI ref, cheque no." />
+                </div>
+              </div>
+              <button className="btn btn-ghost" style={{ width: '100%', marginTop: 10 }} onClick={addPayment}>+ Record Payment</button>
+            </div>
           </div>
 
           <div className="glass-card ig-card">
@@ -390,6 +507,12 @@ export default function InvoiceGenerator() {
               <div className="ig-pv-totals-row"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
               <div className="ig-pv-totals-row"><span>Total Tax</span><span>{fmt(taxAmount)}</span></div>
               <div className="ig-pv-totals-row ig-pv-grand"><span>Grand Total</span><span>{fmt(grandTotal)}</span></div>
+              {amountPaid > 0 && (
+                <>
+                  <div className="ig-pv-totals-row" style={{ marginTop: 6 }}><span>Paid</span><span>{fmt(amountPaid)}</span></div>
+                  <div className="ig-pv-totals-row ig-pv-balance"><span>Balance Due</span><span>{fmt(balanceDue)}</span></div>
+                </>
+              )}
             </div>
 
             {notes && (
@@ -407,6 +530,63 @@ export default function InvoiceGenerator() {
           </div>
         </div>
       </div>
+
+      {/* ── Hidden receipt template (rendered only while generating a PDF) ── */}
+      {receipt && (
+        <div style={{ position: 'fixed', left: -99999, top: 0, width: 794 }}>
+          <div id="receipt-preview" className="rc-preview">
+            <div className="rc-header">
+              <div className="rc-brand">
+                <img src={logoUrl} alt="Shera Travels" className="rc-logo" />
+                <div>
+                  <h1>{COMPANY.name}</h1>
+                  <p className="rc-tagline">{COMPANY.tagline}</p>
+                </div>
+              </div>
+              <div className="rc-badge">PAYMENT RECEIPT</div>
+            </div>
+
+            <div className="rc-meta">
+              <div>
+                <p><span>Receipt No:</span> <strong>RCPT-{invoiceNumber || '—'}</strong></p>
+                <p><span>Against Invoice:</span> <strong>{invoiceNumber || '—'}</strong></p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p><span>Date:</span> <strong>{receipt.date ? new Date(receipt.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</strong></p>
+                <p><span>Mode:</span> <strong>{receipt.mode}</strong></p>
+              </div>
+            </div>
+
+            <div className="rc-body">
+              <p>Received with thanks from <strong>{client.name || 'Client'}</strong></p>
+              <div className="rc-amount-box">
+                <span>Amount Received</span>
+                <strong>{fmt(receipt.amount)}</strong>
+              </div>
+              {receipt.reference && <p className="rc-ref">Reference: {receipt.reference}</p>}
+            </div>
+
+            <div className="rc-summary">
+              <div className="rc-summary-row"><span>Invoice Total</span><span>{fmt(grandTotal)}</span></div>
+              <div className="rc-summary-row"><span>Total Paid to Date</span><span>{fmt(amountPaid)}</span></div>
+              <div className="rc-summary-row rc-summary-bal"><span>Balance Due</span><span>{fmt(balanceDue)}</span></div>
+            </div>
+
+            <div className="rc-sign">
+              <div className="rc-sign-line">
+                <div className="rc-sign-rule" />
+                <span>Authorised Signatory</span>
+              </div>
+            </div>
+
+            <div className="rc-footer">
+              <p className="rc-footer-strong">GSTIN: {COMPANY.gst} &nbsp;|&nbsp; {COMPANY.email} &nbsp;|&nbsp; {COMPANY.phone1}</p>
+              <p>{COMPANY.name} — {COMPANY.tagline}</p>
+              <p>This is a system-generated payment receipt.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .ig-header {
@@ -455,6 +635,100 @@ export default function InvoiceGenerator() {
         .ig-item-num { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
         .ig-item-remove { border: none; background: none; color: #ef4444; font-size: 11px; font-weight: 700; cursor: pointer; }
         .ig-item-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+
+        /* ── Payments card ── */
+        .pay-summary {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+        .pay-summary-cell {
+          background: #F8FAFC;
+          border: 1px solid var(--border-glass);
+          border-radius: 8px;
+          padding: 10px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .pay-summary-cell span { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+        .pay-summary-cell strong { font-size: 15px; font-weight: 800; }
+
+        .pay-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .pay-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          border: 1px solid var(--border-glass);
+          border-radius: 8px;
+          padding: 8px 12px;
+        }
+        .pay-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .pay-amt { font-size: 14px; font-weight: 800; color: #059669; }
+        .pay-meta { font-size: 11px; color: var(--text-muted); }
+        .pay-row-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .pay-remove { border: none; background: none; color: #ef4444; font-size: 14px; font-weight: 700; cursor: pointer; padding: 4px 6px; }
+        .pay-add { border-top: 1px dashed var(--border-glass); padding-top: 14px; }
+
+        /* ── Receipt template (off-screen, captured to PDF) ── */
+        .rc-preview {
+          background: #fff;
+          padding: 40px;
+          color: #1a1a1a;
+          font-family: inherit;
+          width: 794px;
+        }
+        .rc-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #E2E8F0;
+          margin-bottom: 24px;
+        }
+        .rc-brand { display: flex; align-items: center; gap: 14px; }
+        .rc-logo { width: 60px; height: 60px; object-fit: contain; }
+        .rc-brand h1 { font-size: 24px; font-weight: 900; color: #0EA5E9; text-transform: uppercase; letter-spacing: 0.4px; }
+        .rc-tagline { font-size: 12px; font-style: italic; color: #64748B; margin-top: 2px; }
+        .rc-badge {
+          background: #059669;
+          color: #fff;
+          font-weight: 800;
+          font-size: 14px;
+          padding: 12px 24px;
+          border-radius: 8px;
+          letter-spacing: 1.2px;
+          white-space: nowrap;
+        }
+        .rc-meta { display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 12.5px; color: #475569; line-height: 1.9; }
+        .rc-meta p { margin: 0; }
+        .rc-meta span { color: #94A3B8; margin-right: 6px; }
+        .rc-meta strong { color: #1a1a1a; }
+        .rc-body { margin-bottom: 24px; font-size: 14px; }
+        .rc-amount-box {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #ECFDF5;
+          border: 1px solid #A7F3D0;
+          border-radius: 10px;
+          padding: 16px 20px;
+          margin: 12px 0;
+        }
+        .rc-amount-box span { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #065F46; }
+        .rc-amount-box strong { font-size: 26px; font-weight: 900; color: #047857; }
+        .rc-ref { font-size: 12.5px; color: #475569; }
+        .rc-summary { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-bottom: 40px; }
+        .rc-summary-row { display: flex; justify-content: space-between; gap: 40px; width: 280px; font-size: 13px; }
+        .rc-summary-bal { font-weight: 800; font-size: 15px; border-top: 2px solid #0F172A; padding-top: 8px; margin-top: 4px; color: #B45309; }
+        .rc-sign { display: flex; justify-content: flex-end; margin-bottom: 32px; }
+        .rc-sign-line { text-align: center; }
+        .rc-sign-rule { width: 180px; border-top: 1px solid #94A3B8; margin-bottom: 6px; }
+        .rc-sign-line span { font-size: 12px; color: #64748B; }
+        .rc-footer { padding-top: 14px; text-align: center; border-top: 1px solid #E2E8F0; font-size: 10.5px; color: #94A3B8; line-height: 1.8; }
+        .rc-footer-strong { font-weight: 700; color: #1a1a1a; font-size: 11px; }
 
         .ig-preview-wrap { position: sticky; top: 20px; }
         .ig-preview {
@@ -530,6 +804,7 @@ export default function InvoiceGenerator() {
         .ig-pv-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-bottom: 20px; }
         .ig-pv-totals-row { display: flex; justify-content: space-between; gap: 40px; font-size: 12.5px; width: 240px; }
         .ig-pv-grand { font-size: 16px; font-weight: 800; border-top: 2px solid #0F172A; padding-top: 8px; margin-top: 4px; color: #0EA5E9; }
+        .ig-pv-balance { font-size: 14px; font-weight: 800; color: #B45309; border-top: 1px dashed #CBD5E1; padding-top: 6px; }
 
         .ig-pv-notes { font-size: 11.5px; color: #475569; margin-bottom: 16px; }
         .ig-pv-notes p { margin-top: 4px; white-space: pre-wrap; }

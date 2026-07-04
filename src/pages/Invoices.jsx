@@ -5,9 +5,18 @@ import toast from 'react-hot-toast'
 
 const STATUS_STYLES = {
   paid:     { bg: '#D1FAE5', color: '#065F46', label: 'Paid' },
+  partial:  { bg: '#DBEAFE', color: '#1E40AF', label: 'Partial' },
   unpaid:   { bg: '#FEF3C7', color: '#92400E', label: 'Unpaid' },
   overdue:  { bg: '#FEE2E2', color: '#991B1B', label: 'Overdue' },
 }
+
+// Amount actually received against an invoice (jsonb payments or stored total).
+const paidOf = (inv) => {
+  if (inv.amount_paid != null) return Number(inv.amount_paid) || 0
+  if (Array.isArray(inv.payments)) return inv.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  return inv.status === 'paid' ? (Number(inv.amount) || 0) : 0
+}
+const balanceOf = (inv) => Math.max(0, (Number(inv.amount) || 0) - paidOf(inv))
 
 function StatusBadge({ status }) {
   const s = STATUS_STYLES[status] || STATUS_STYLES.unpaid
@@ -62,8 +71,11 @@ export default function Invoices() {
     }
   }
 
-  const markPaid = async (id) => {
-    const { error } = await supabase.from('invoices').update({ status: 'paid' }).eq('id', id)
+  const markPaid = async (inv) => {
+    const amt = Number(inv.amount) || 0
+    const { error } = await supabase.from('invoices')
+      .update({ status: 'paid', amount_paid: amt })
+      .eq('id', inv.id)
     if (error) {
       toast.error('Failed to mark as paid')
       console.error(error)
@@ -81,8 +93,10 @@ export default function Invoices() {
   })
 
   const totalAmount = invoices.length
-  const paidAmount = invoices.filter(i => i.status === 'paid').reduce((acc, i) => acc + (Number(i.amount) || 0), 0)
-  const unpaidAmount = invoices.filter(i => i.status !== 'paid').reduce((acc, i) => acc + (Number(i.amount) || 0), 0)
+  // Sum of money actually collected vs still outstanding, across all invoices
+  // (accounts for part-payments, not just fully-paid invoices).
+  const paidAmount = invoices.reduce((acc, i) => acc + paidOf(i), 0)
+  const unpaidAmount = invoices.reduce((acc, i) => acc + balanceOf(i), 0)
   const overdueCount = invoices.filter(i => i.status === 'overdue').length
 
   const statCards = [
@@ -125,6 +139,7 @@ export default function Invoices() {
         <div className="filter-pills">
           <button className={`filter-pill ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
           <button className={`filter-pill ${filter === 'unpaid' ? 'active' : ''}`} onClick={() => setFilter('unpaid')}>Unpaid</button>
+          <button className={`filter-pill ${filter === 'partial' ? 'active' : ''}`} onClick={() => setFilter('partial')}>Partial</button>
           <button className={`filter-pill ${filter === 'paid' ? 'active' : ''}`} onClick={() => setFilter('paid')}>Paid</button>
           <button className={`filter-pill ${filter === 'overdue' ? 'active' : ''}`} onClick={() => setFilter('overdue')}>Overdue</button>
         </div>
@@ -148,6 +163,8 @@ export default function Invoices() {
                   <th>Invoice #</th>
                   <th>Client</th>
                   <th>Amount</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
                   <th>Issue Date</th>
                   <th>Due Date</th>
                   <th>Status</th>
@@ -160,13 +177,15 @@ export default function Invoices() {
                     <td style={{ fontWeight: 700 }}>{inv.invoice_number || '—'}</td>
                     <td>{inv.client_name}</td>
                     <td>₹{(Number(inv.amount) || 0).toLocaleString()}</td>
+                    <td style={{ color: '#059669', fontWeight: 600 }}>₹{paidOf(inv).toLocaleString()}</td>
+                    <td style={{ color: balanceOf(inv) > 0 ? '#B45309' : '#059669', fontWeight: 600 }}>₹{balanceOf(inv).toLocaleString()}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(inv.issue_date)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(inv.due_date)}</td>
                     <td><StatusBadge status={inv.status} /></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         {inv.status !== 'paid' && (
-                          <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => markPaid(inv.id)} title="Mark Paid">✅</button>
+                          <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => markPaid(inv)} title="Mark Paid">✅</button>
                         )}
                         <Link className="btn btn-ghost" style={{ padding: 8 }} to={`/invoices/${inv.id}/edit`} title="Edit">✏️</Link>
                         <button className="btn btn-ghost" style={{ padding: 8, color: '#EF4444' }} onClick={() => deleteInvoice(inv.id)} title="Delete">🗑️</button>
