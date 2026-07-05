@@ -93,6 +93,7 @@ export default function Itinerary() {
             <table className="modern-table itin-excel-table">
               <thead>
                 <tr>
+                  <th style={{ width: 60, textAlign: 'center' }}>Sr No</th>
                   <th>Package</th>
                   <th>Duration</th>
                   <th>Location</th>
@@ -101,8 +102,11 @@ export default function Itinerary() {
                 </tr>
               </thead>
               <tbody>
-                {pagedPackages.map(pkg => (
+                {pagedPackages.map((pkg, idx) => (
                   <tr key={pkg.id}>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-dim)' }}>
+                      {rangeStart + idx}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, color: '#fff' }}>
