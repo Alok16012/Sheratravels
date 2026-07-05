@@ -32,13 +32,34 @@ export default function Itinerary() {
 
   // Same fallback the table cell uses, so the filter matches what's displayed.
   const placeOf = (p) => p.start_location || 'Kashmir'
+  // Tidy the display label: single spaces, no space before punctuation.
+  const cleanPlace = (s) => (s || 'Kashmir').replace(/\s+/g, ' ').replace(/\s+([,.])/g, '$1').trim()
+  // The match key ignores case AND punctuation/spacing, so "JAMMU", "Jammu ,"
+  // and "Jammu," all collapse into one option. Filtering compares on this key.
+  const normPlace = (s) => cleanPlace(s).toLowerCase().replace(/[^a-z0-9]+/g, '')
+
   const dayOptions = [...new Set(packages.map(p => p.days).filter(v => v != null && v !== ''))]
     .sort((a, b) => Number(a) - Number(b))
-  const placeOptions = [...new Set(packages.map(placeOf))].sort()
+
+  // Dedupe places by normalized key; pick the best-formatted label to display
+  // (prefer one that has a comma separator and isn't ALL CAPS).
+  const scoreLabel = (l) => (l.includes(',') ? 2 : 0) + (l !== l.toUpperCase() ? 1 : 0)
+  const placeMap = new Map()
+  packages.forEach(p => {
+    const key = normPlace(placeOf(p))
+    const label = cleanPlace(placeOf(p))
+    const existing = placeMap.get(key)
+    if (!existing || scoreLabel(label) > scoreLabel(existing)) {
+      placeMap.set(key, label)
+    }
+  })
+  const placeOptions = [...placeMap.entries()]
+    .map(([key, label]) => ({ key, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
 
   const filteredPackages = packages.filter(p =>
     (!filterDays || String(p.days) === String(filterDays)) &&
-    (!filterPlace || placeOf(p) === filterPlace)
+    (!filterPlace || normPlace(placeOf(p)) === filterPlace)
   )
 
   const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE))
@@ -113,7 +134,7 @@ export default function Itinerary() {
           >
             <option value="">All Places</option>
             {placeOptions.map(pl => (
-              <option key={pl} value={pl}>{pl}</option>
+              <option key={pl.key} value={pl.key}>{pl.label}</option>
             ))}
           </select>
           {(filterDays || filterPlace) && (
