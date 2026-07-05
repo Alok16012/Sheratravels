@@ -246,6 +246,21 @@ export function PackageProvider({ children }) {
     }
   }, [fetchPackages])
 
+  // Reassign an itinerary to another user by moving its created_by ownership.
+  const transferPackage = useCallback(async (id, newOwnerId) => {
+    const { error } = await supabase.from('packages')
+      .update({ created_by: newOwnerId || null, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) {
+      console.error('Transfer error:', error)
+      toast.error('Transfer failed: ' + (error.message || 'Check database connection'))
+      return false
+    }
+    toast.success('Itinerary transferred')
+    await fetchPackages(true)
+    return true
+  }, [fetchPackages])
+
   // ── AUTO-SAVE (debounced) ─────────────────
   const triggerSave = useCallback((pkg, prices, days) => {
     dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' })
@@ -483,7 +498,7 @@ export function PackageProvider({ children }) {
   return (
     <PackageContext.Provider value={{
       ...state,
-      fetchPackages, loadPackage, createNewPackage, deletePackage, duplicatePackage,
+      fetchPackages, loadPackage, createNewPackage, deletePackage, duplicatePackage, transferPackage,
       updateField, triggerSave, saveAll,
       addPrice, addPricePreset, updatePrice, removePrice,
       addDay, removeDay, updateDay, toggleDayOpen, moveDay,

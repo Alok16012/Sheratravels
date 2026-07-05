@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { usePackage } from '../context/PackageContext'
 import { useCRM } from '../context/CRMContext'
@@ -7,19 +8,76 @@ import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 20
 
+// Self-contained modal (inline styles + portal to <body>) so it renders
+// centered regardless of any transformed ancestor on this page.
+function TransferItineraryModal({ pkg, users, onTransfer, onClose }) {
+  const [selected, setSelected] = useState(pkg.created_by || '')
+  const currentOwner = users.find(u => u.id === pkg.created_by)
+  const overlay = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16,
+  }
+  const card = {
+    background: 'var(--bg-card, #1e2030)', color: 'var(--text-bright, #fff)',
+    borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
+    boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '1px solid var(--border-glass, rgba(255,255,255,0.1))',
+  }
+  return createPortal(
+    <div style={overlay} onClick={onClose}>
+      <div style={card} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>Transfer Itinerary</h3>
+          <button className="btn btn-ghost" style={{ padding: 6 }} onClick={onClose}>✕</button>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-dim, #94a3b8)', marginBottom: 16 }}>
+          {pkg.title || 'Untitled'}
+        </p>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Assign To</label>
+        <select
+          className="glass-input"
+          style={{ width: '100%', padding: '10px 12px', fontSize: 13, marginBottom: 12 }}
+          value={selected}
+          onChange={e => setSelected(e.target.value)}
+        >
+          <option value="">— Unassigned —</option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>{u.full_name || u.username}</option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: 'var(--text-dim, #94a3b8)', marginBottom: 20 }}>
+          Currently owned by: <strong>{currentOwner ? (currentOwner.full_name || currentOwner.username) : 'Unassigned'}</strong>
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => onTransfer(selected || null)}>Transfer</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 export default function Itinerary() {
   const navigate = useNavigate()
-  const { packages, fetchPackages, createNewPackage, duplicatePackage, loading } = usePackage()
+  const { packages, fetchPackages, createNewPackage, duplicatePackage, transferPackage, loading } = usePackage()
   const { leads, fetchLeads } = useCRM()
   const [clientMap, setClientMap] = useState({})
   const [page, setPage] = useState(1)
   const [filterDays, setFilterDays] = useState('')
   const [filterPlace, setFilterPlace] = useState('')
+  const [users, setUsers] = useState([])
+  const [transferTarget, setTransferTarget] = useState(null)
 
   useEffect(() => {
     fetchPackages()
     fetchLeads()
   }, [fetchPackages, fetchLeads])
+
+  useEffect(() => {
+    supabase.from('app_users').select('id, full_name, username, active').then(({ data }) => {
+      setUsers((data || []).filter(u => u.active !== false))
+    })
+  }, [])
 
   useEffect(() => {
     // Initialize clientMap from packages
@@ -93,6 +151,11 @@ export default function Itinerary() {
   const handleDuplicate = async (pkgId) => {
     const newId = await duplicatePackage(pkgId)
     if (newId) navigate(`/editor/${newId}`)
+  }
+
+  const handleTransfer = async (newOwnerId) => {
+    const ok = await transferPackage(transferTarget.id, newOwnerId)
+    if (ok) setTransferTarget(null)
   }
 
   const handleDelete = async (pkgId) => {
@@ -220,6 +283,7 @@ export default function Itinerary() {
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => navigate(`/editor/${pkg.id}`)} title="Edit">✏️</button>
                         <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => handleDuplicate(pkg.id)} title="Make a copy">📄</button>
+                        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => setTransferTarget(pkg)} title="Transfer">🔄</button>
                         <button className="btn btn-ghost" style={{ padding: 8, color: '#EF4444' }} onClick={() => handleDelete(pkg.id)} title="Delete">🗑️</button>
                       </div>
                     </td>
@@ -261,6 +325,15 @@ export default function Itinerary() {
             </div>
           )}
         </div>
+      )}
+
+      {transferTarget && (
+        <TransferItineraryModal
+          pkg={transferTarget}
+          users={users}
+          onTransfer={handleTransfer}
+          onClose={() => setTransferTarget(null)}
+        />
       )}
     </div>
   )
