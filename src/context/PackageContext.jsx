@@ -161,6 +161,91 @@ export function PackageProvider({ children }) {
     return true
   }, [])
 
+  // Deep-copy an itinerary: the package row plus its prices, days and each
+  // day's photos, into a brand-new package owned by the current user. Returns
+  // the new package id so the caller can open it in the editor.
+  const duplicatePackage = useCallback(async (id) => {
+    dispatch({ type: 'SET_SAVING', payload: true })
+    try {
+      const [pkgRes, pricesRes, daysRes] = await Promise.all([
+        supabase.from('packages').select('*').eq('id', id).single(),
+        supabase.from('prices').select('*').eq('package_id', id).order('sort_order'),
+        supabase.from('days').select('*, day_photos(*)').eq('package_id', id).order('sort_order'),
+      ])
+      if (pkgRes.error || !pkgRes.data) throw pkgRes.error || new Error('Itinerary not found')
+
+      const session = getSession()
+      // created_by is a uuid column; some bootstrap/admin sessions carry a
+      // non-uuid id, which the DB rejects. Only claim ownership when the id is
+      // a real uuid, otherwise keep whatever the source itinerary had.
+      const isUuid = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v || '')
+
+      // New package row: drop identity/timestamps, tag as a copy, set owner.
+      const pkgRow = { ...pkgRes.data }
+      delete pkgRow.id
+      delete pkgRow.created_at
+      delete pkgRow.updated_at
+      pkgRow.title = `${pkgRes.data.title || 'Untitled'} (Copy)`
+      pkgRow.created_by = isUuid(session?.id) ? session.id : (pkgRes.data.created_by || null)
+
+      const { data: newPkg, error: insErr } = await supabase
+        .from('packages').insert([pkgRow]).select().single()
+      if (insErr) throw insErr
+
+      // Copy prices
+      const prices = pricesRes.data || []
+      if (prices.length) {
+        const priceRows = prices.map((p, i) => {
+          const row = { ...p }
+          delete row.id
+          delete row.created_at
+          row.package_id = newPkg.id
+          row.sort_order = row.sort_order ?? i
+          return row
+        })
+        const { error: priceErr } = await supabase.from('prices').insert(priceRows)
+        if (priceErr) throw priceErr
+      }
+
+      // Copy days, then each day's photos (day_photos need the new day id).
+      const days = daysRes.data || []
+      for (const d of days) {
+        const dayRow = { ...d }
+        delete dayRow.id
+        delete dayRow.created_at
+        delete dayRow.day_photos
+        dayRow.package_id = newPkg.id
+
+        const { data: newDay, error: dayErr } = await supabase
+          .from('days').insert([dayRow]).select().single()
+        if (dayErr) throw dayErr
+
+        const photos = d.day_photos || []
+        if (photos.length && newDay) {
+          const photoRows = photos.map(ph => {
+            const row = { ...ph }
+            delete row.id
+            delete row.created_at
+            row.day_id = newDay.id
+            return row
+          })
+          const { error: photoErr } = await supabase.from('day_photos').insert(photoRows)
+          if (photoErr) throw photoErr
+        }
+      }
+
+      await fetchPackages(true)
+      toast.success('Itinerary copied — you can edit it now')
+      dispatch({ type: 'SET_SAVING', payload: false })
+      return newPkg.id
+    } catch (e) {
+      console.error('Duplicate error:', e)
+      toast.error('Copy failed: ' + (e.message || 'Check database connection'))
+      dispatch({ type: 'SET_SAVING', payload: false })
+      return null
+    }
+  }, [fetchPackages])
+
   // ── AUTO-SAVE (debounced) ─────────────────
   const triggerSave = useCallback((pkg, prices, days) => {
     dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' })
@@ -398,7 +483,7 @@ export function PackageProvider({ children }) {
   return (
     <PackageContext.Provider value={{
       ...state,
-      fetchPackages, loadPackage, createNewPackage, deletePackage,
+      fetchPackages, loadPackage, createNewPackage, deletePackage, duplicatePackage,
       updateField, triggerSave, saveAll,
       addPrice, addPricePreset, updatePrice, removePrice,
       addDay, removeDay, updateDay, toggleDayOpen, moveDay,

@@ -9,7 +9,7 @@ const PAGE_SIZE = 20
 
 export default function Itinerary() {
   const navigate = useNavigate()
-  const { packages, fetchPackages, createNewPackage, loading } = usePackage()
+  const { packages, fetchPackages, createNewPackage, duplicatePackage, loading } = usePackage()
   const { leads, fetchLeads } = useCRM()
   const [clientMap, setClientMap] = useState({})
   const [page, setPage] = useState(1)
@@ -88,6 +88,11 @@ export default function Itinerary() {
   const handleNew = async () => {
     const id = await createNewPackage()
     if (id) navigate(`/editor/${id}`)
+  }
+
+  const handleDuplicate = async (pkgId) => {
+    const newId = await duplicatePackage(pkgId)
+    if (newId) navigate(`/editor/${newId}`)
   }
 
   const handleDelete = async (pkgId) => {
@@ -213,8 +218,9 @@ export default function Itinerary() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => navigate(`/editor/${pkg.id}`)}>✏️</button>
-                        <button className="btn btn-ghost" style={{ padding: 8, color: '#EF4444' }} onClick={() => handleDelete(pkg.id)}>🗑️</button>
+                        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => navigate(`/editor/${pkg.id}`)} title="Edit">✏️</button>
+                        <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => handleDuplicate(pkg.id)} title="Make a copy">📄</button>
+                        <button className="btn btn-ghost" style={{ padding: 8, color: '#EF4444' }} onClick={() => handleDelete(pkg.id)} title="Delete">🗑️</button>
                       </div>
                     </td>
                   </tr>
