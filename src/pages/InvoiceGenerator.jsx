@@ -4,7 +4,9 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import logoUrl from '../../public/logo.png'
+// Reference public/ asset by URL instead of importing (avoids base64-inlining
+// the logo into this chunk).
+const logoUrl = '/logo.png'
 
 const COMPANY = {
   name: 'Shera Travels',

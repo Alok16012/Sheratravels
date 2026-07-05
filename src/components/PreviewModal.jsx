@@ -2,7 +2,9 @@ import { useState } from 'react'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
-import logoUrl from '../../public/logo.png'
+// public/ assets are served by URL — importing them base64-inlines the file
+// into the JS bundle, so reference by path instead to keep the chunk small.
+const logoUrl = '/logo.png'
 
 export default function PreviewModal({ open, onClose, onPrint, pkg, prices, days }) {
   const [sharing, setSharing] = useState(false)
