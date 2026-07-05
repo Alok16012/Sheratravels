@@ -68,7 +68,12 @@ export function PackageProvider({ children }) {
     // Ownership scoping: admins see every itinerary; everyone else sees only
     // the ones they created (created_by = their user id).
     const session = getSession()
-    let query = supabase.from('packages').select('*').order('created_at', { ascending: false })
+    // The list view only needs a handful of light columns. Selecting '*' here
+    // pulled every column — including large base64 photo fields — bloating the
+    // response to ~2.4MB for the whole table. Restricting to the columns the
+    // Itinerary list and Home quote modal actually read drops it to ~12KB.
+    const LIST_COLS = 'id, title, days, nights, start_location, created_by, client_name, inclusions, created_at'
+    let query = supabase.from('packages').select(LIST_COLS).order('created_at', { ascending: false })
     if (session && !session.is_admin) {
       query = query.eq('created_by', session.id)
     }
