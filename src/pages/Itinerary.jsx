@@ -13,6 +13,8 @@ export default function Itinerary() {
   const { leads, fetchLeads } = useCRM()
   const [clientMap, setClientMap] = useState({})
   const [page, setPage] = useState(1)
+  const [filterDays, setFilterDays] = useState('')
+  const [filterPlace, setFilterPlace] = useState('')
 
   useEffect(() => {
     fetchPackages()
@@ -28,14 +30,26 @@ export default function Itinerary() {
     setClientMap(map)
   }, [packages])
 
-  const totalPages = Math.max(1, Math.ceil(packages.length / PAGE_SIZE))
+  // Same fallback the table cell uses, so the filter matches what's displayed.
+  const placeOf = (p) => p.start_location || 'Kashmir'
+  const dayOptions = [...new Set(packages.map(p => p.days).filter(v => v != null && v !== ''))]
+    .sort((a, b) => Number(a) - Number(b))
+  const placeOptions = [...new Set(packages.map(placeOf))].sort()
+
+  const filteredPackages = packages.filter(p =>
+    (!filterDays || String(p.days) === String(filterDays)) &&
+    (!filterPlace || placeOf(p) === filterPlace)
+  )
+
+  const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE))
   // Derive the clamped page directly during render (no effect needed) so it
-  // self-corrects if the list shrinks below the current page, e.g. after a delete.
+  // self-corrects if the list shrinks below the current page, e.g. after a delete
+  // or when a filter narrows the results.
   const currentPage = Math.min(page, totalPages)
 
-  const pagedPackages = packages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const rangeStart = packages.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(currentPage * PAGE_SIZE, packages.length)
+  const pagedPackages = filteredPackages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeStart = filteredPackages.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredPackages.length)
 
   const handleClientChange = async (pkgId, clientName) => {
     setClientMap(prev => ({ ...prev, [pkgId]: clientName }))
@@ -78,6 +92,45 @@ export default function Itinerary() {
         </button>
       </div>
 
+      {!loading && packages.length > 0 && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select
+            className="glass-input"
+            style={{ padding: '8px 12px', fontSize: 13, minWidth: 150 }}
+            value={filterDays}
+            onChange={e => { setFilterDays(e.target.value); setPage(1) }}
+          >
+            <option value="">All Durations</option>
+            {dayOptions.map(d => (
+              <option key={d} value={d}>{d} Day{Number(d) > 1 ? 's' : ''}</option>
+            ))}
+          </select>
+          <select
+            className="glass-input"
+            style={{ padding: '8px 12px', fontSize: 13, minWidth: 150 }}
+            value={filterPlace}
+            onChange={e => { setFilterPlace(e.target.value); setPage(1) }}
+          >
+            <option value="">All Places</option>
+            {placeOptions.map(pl => (
+              <option key={pl} value={pl}>{pl}</option>
+            ))}
+          </select>
+          {(filterDays || filterPlace) && (
+            <button
+              className="btn btn-ghost"
+              style={{ padding: '8px 14px', fontSize: 12.5 }}
+              onClick={() => { setFilterDays(''); setFilterPlace(''); setPage(1) }}
+            >
+              ✕ Clear Filters
+            </button>
+          )}
+          <span style={{ fontSize: 12.5, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+            {filteredPackages.length} of {packages.length} shown
+          </span>
+        </div>
+      )}
+
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : packages.length === 0 ? (
@@ -86,6 +139,13 @@ export default function Itinerary() {
           <h2>No itineraries yet</h2>
           <p>Create your first travel itinerary</p>
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={handleNew}>+ Create Itinerary</button>
+        </div>
+      ) : filteredPackages.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <h2>No matching itineraries</h2>
+          <p>Try adjusting or clearing the filters</p>
+          <button className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => { setFilterDays(''); setFilterPlace(''); setPage(1) }}>✕ Clear Filters</button>
         </div>
       ) : (
         <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -148,7 +208,7 @@ export default function Itinerary() {
               padding: '14px 20px', borderTop: '1px solid var(--border-glass)', flexWrap: 'wrap', gap: 12,
             }}>
               <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
-                Showing {rangeStart}–{rangeEnd} of {packages.length}
+                Showing {rangeStart}–{rangeEnd} of {filteredPackages.length}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button
