@@ -1,6 +1,7 @@
 // @refresh reset
 import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
+import { getSession } from '../lib/auth'
 import toast from 'react-hot-toast'
 
 const CRMContext = createContext(null)
@@ -89,10 +90,14 @@ export function CRMProvider({ children }) {
     if (!isConfigured) { warnUnconfigured(); return null }
     dispatch({ type: 'SET_SAVING', payload: true })
     const stage = formData.stage === 'new' ? 'new_inquiry' : formData.stage
+    const session = getSession()
     const lead = {
       ...sanitizeLead(formData),
       id: crypto.randomUUID(),
       stage,
+      // New leads default to whoever created them; can be reassigned later.
+      assigned_to:   formData.assigned_to   || session?.id || null,
+      assigned_name: formData.assigned_name || session?.full_name || session?.username || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -125,6 +130,27 @@ export function CRMProvider({ children }) {
     } catch (err) {
       console.error('updateLead error:', err)
       toast.error(`Update failed: ${err.message || 'check RLS/schema'}`)
+      throw err
+    }
+  }, [state.leads])
+
+  // Reassign a lead to another user. Kept separate from updateLead because
+  // updateLead runs sanitizeLead (which would reset pax/dates to defaults when
+  // those fields aren't part of the change set).
+  const transferLead = useCallback(async (id, assignedTo, assignedName) => {
+    if (!isConfigured) { warnUnconfigured(); return null }
+    try {
+      const { data, error } = await supabase.from('leads')
+        .update({ assigned_to: assignedTo || null, assigned_name: assignedName || null, updated_at: new Date().toISOString() })
+        .eq('id', id).select().single()
+      if (error) throw error
+      const merged = data || { ...state.leads.find(l => l.id === id), assigned_to: assignedTo, assigned_name: assignedName }
+      dispatch({ type: 'UPDATE_LEAD', payload: merged })
+      toast.success(assignedName ? `Lead transferred to ${assignedName}` : 'Lead unassigned')
+      return merged
+    } catch (err) {
+      console.error('transferLead error:', err)
+      toast.error(`Transfer failed: ${err.message || 'check schema'}`)
       throw err
     }
   }, [state.leads])
@@ -177,7 +203,7 @@ export function CRMProvider({ children }) {
   return (
     <CRMContext.Provider value={{
       ...state,
-      fetchLeads, addLead, updateLead, changeStage, deleteLead,
+      fetchLeads, addLead, updateLead, changeStage, deleteLead, transferLead,
       getStats,
     }}>
       {children}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useCRM, LEAD_STAGES } from '../../context/CRMContext'
 import { useBooking } from '../../context/BookingContext'
+import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 // Strip everything except digits; prefix with country code if missing
@@ -44,7 +46,7 @@ function ConvertBookingModal({ lead, onSave, onClose }) {
     })
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content glass-card animate-fade" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
@@ -96,7 +98,8 @@ function ConvertBookingModal({ lead, onSave, onClose }) {
           <button className="btn btn-primary" onClick={submit}>Create Booking</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -107,6 +110,45 @@ const avatarColor = (name = '') => {
 
 const initials = (name = '') => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
 
+function TransferModal({ lead, users, onTransfer, onClose }) {
+  const [selected, setSelected] = useState(lead.assigned_to || '')
+
+  const submit = () => {
+    const u = users.find(x => x.id === selected)
+    onTransfer(u?.id || null, u ? (u.full_name || u.username) : null)
+  }
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass-card animate-fade" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <div className="modal-header">
+          <h3>Transfer Lead — {lead.name}</h3>
+          <button className="modal-close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body-custom">
+          <div className="form-field">
+            <label>Assign To</label>
+            <select className="glass-input" value={selected} onChange={e => setSelected(e.target.value)}>
+              <option value="">— Unassigned —</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.full_name || u.username}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-muted" style={{ fontSize: 12 }}>
+            Currently handling: <strong>{lead.assigned_name || 'Unassigned'}</strong>
+          </p>
+        </div>
+        <div className="modal-footer-custom">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={submit}>Transfer</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function LeadModal({ lead, onSave, onClose }) {
   const [form, setForm] = useState(lead || { 
     name: '', email: '', phone: '', whatsapp: '',
@@ -115,7 +157,7 @@ function LeadModal({ lead, onSave, onClose }) {
     source: 'Website', notes: ''
   })
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content glass-card animate-fade" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
@@ -177,12 +219,13 @@ function LeadModal({ lead, onSave, onClose }) {
           <button className="btn btn-primary" onClick={() => onSave(form)}>Save Lead</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
 export default function Leads() {
-  const { leads, loading, fetchLeads, addLead, updateLead, deleteLead } = useCRM()
+  const { leads, loading, fetchLeads, addLead, updateLead, deleteLead, transferLead } = useCRM()
   const { createBooking } = useBooking()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -191,8 +234,17 @@ export default function Leads() {
   const [showAdd, setShowAdd] = useState(false)
   const [editingLead, setEditingLead] = useState(null)
   const [convertLead, setConvertLead] = useState(null)
+  const [transferTarget, setTransferTarget] = useState(null)
+  const [users, setUsers] = useState([])
 
   useEffect(() => { fetchLeads() }, [fetchLeads])
+
+  // Team members (for the "Assigned To" column + transfer dropdown)
+  useEffect(() => {
+    supabase.from('app_users').select('id, full_name, username, active').then(({ data }) => {
+      setUsers((data || []).filter(u => u.active !== false))
+    })
+  }, [])
 
   // Auto-open convert modal when ?convert=<leadId> is present (from Bookings page)
   useEffect(() => {
@@ -245,6 +297,15 @@ export default function Leads() {
     if (window.confirm('Delete this lead?')) {
       await deleteLead(id)
     }
+  }
+
+  const handleTransfer = async (assignedTo, assignedName) => {
+    try {
+      await transferLead(transferTarget.id, assignedTo, assignedName)
+    } catch (err) {
+      console.error('Transfer error:', err)
+    }
+    setTransferTarget(null)
   }
 
   const handleConvert = async (bookingData) => {
@@ -315,6 +376,7 @@ export default function Leads() {
                   <th>Pax</th>
                   <th>Source</th>
                   <th>Stage</th>
+                  <th>Assigned To</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -347,6 +409,18 @@ export default function Leads() {
                         </span>
                       </td>
                       <td>
+                        {lead.assigned_name ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div className="lead-avatar" style={{ width: 24, height: 24, fontSize: 10, borderRadius: 6, background: avatarColor(lead.assigned_name) }}>
+                              {initials(lead.assigned_name)}
+                            </div>
+                            <span style={{ fontSize: 12.5, fontWeight: 600 }}>{lead.assigned_name}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-dim)', fontSize: 12.5 }}>Unassigned</span>
+                        )}
+                      </td>
+                      <td>
                         <div className="lead-actions">
                           {lead.phone && (
                             <a
@@ -367,6 +441,7 @@ export default function Leads() {
                             >💬</a>
                           )}
                           <button className="action-btn convert" onClick={() => setConvertLead(lead)} title="Convert to Booking">💼</button>
+                          <button className="action-btn transfer" onClick={() => setTransferTarget(lead)} title="Transfer Lead">🔄</button>
                           <button className="action-btn" onClick={() => setEditingLead(lead)} title="Edit">✏️</button>
                           <button className="action-btn delete" onClick={() => handleDelete(lead.id)} title="Delete">🗑️</button>
                         </div>
@@ -393,6 +468,15 @@ export default function Leads() {
           lead={convertLead}
           onSave={handleConvert}
           onClose={() => setConvertLead(null)}
+        />
+      )}
+
+      {transferTarget && (
+        <TransferModal
+          lead={transferTarget}
+          users={users}
+          onTransfer={handleTransfer}
+          onClose={() => setTransferTarget(null)}
         />
       )}
 
@@ -557,6 +641,14 @@ export default function Leads() {
         }
         .action-btn.convert:hover {
           background: rgba(245, 158, 11, 0.25);
+        }
+        .action-btn.transfer {
+          background: rgba(99, 102, 241, 0.12);
+          border-color: rgba(99, 102, 241, 0.35);
+          color: #6366f1;
+        }
+        .action-btn.transfer:hover {
+          background: rgba(99, 102, 241, 0.25);
         }
         
         .empty-state {
