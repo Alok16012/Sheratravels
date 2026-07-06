@@ -33,6 +33,7 @@ const Income    = lazy(() => import('./pages/Income'))
 const Expenses  = lazy(() => import('./pages/Expenses'))
 const AuditLogs = lazy(() => import('./pages/AuditLogs'))
 const UserManagement = lazy(() => import('./pages/UserManagement'))
+const WebsiteContent = lazy(() => import('./pages/WebsiteContent'))
 
 // Auth & Public
 const Login       = lazy(() => import('./pages/Login'))
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="/editor/:id" element={<StandaloneRoute><Editor /></StandaloneRoute>} />
               <Route path="/admin" element={<ProtectedRoute module="admin"><Admin /></ProtectedRoute>} />
               <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+              <Route path="/website-content" element={<AdminRoute><WebsiteContent /></AdminRoute>} />
 
               <Route path="/leads" element={<ProtectedRoute module="leads"><Leads /></ProtectedRoute>} />
               <Route path="/bookings" element={<ProtectedRoute module="bookings"><Bookings /></ProtectedRoute>} />

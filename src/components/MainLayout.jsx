@@ -54,6 +54,7 @@ export default function MainLayout({ children, headerActions }) {
         { path: '/audit-logs', label: 'Audit Logs', icon: '📜', module: 'audit_logs' },
         { path: '/admin', label: 'Settings', icon: '⚙️', module: 'admin' },
         ...(admin ? [{ path: '/users', label: 'Users & Roles', icon: '🔐' }] : []),
+        ...(admin ? [{ path: '/website-content', label: 'Website Content', icon: '🌐' }] : []),
       ],
     },
   ]

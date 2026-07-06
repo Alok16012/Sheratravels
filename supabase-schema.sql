@@ -318,6 +318,20 @@ alter table app_users disable row level security;
 -- the initial admin account if app_users is empty — no manual insert needed.
 
 -- ═══════════════════════════════════════
+-- SITE CONTENT (editable website content)
+-- Powers the CRM "Website Content" editor and the public website
+-- (travelshera). One row per page, e.g. key = 'about', value = JSON.
+-- ═══════════════════════════════════════
+
+create table if not exists site_content (
+  key text primary key,             -- page/section key, e.g. 'about'
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz default now()
+);
+
+alter table site_content disable row level security;
+
+-- ═══════════════════════════════════════
 -- STORAGE BUCKET
 -- Create manually in Supabase Dashboard:
 -- Storage → New Bucket → Name: "itinerary-photos" → Public: YES
