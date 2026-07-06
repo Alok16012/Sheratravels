@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase, isConfigured, uploadPhoto } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 // Public website URL — used for the "View live page" link.
@@ -115,7 +115,7 @@ export default function WebsiteContent() {
   const [about, setAbout] = useState(clone(DEFAULT_ABOUT))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [tableMissing, setTableMissing] = useState(false)
+  const [uploadingIdx, setUploadingIdx] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -123,9 +123,8 @@ export default function WebsiteContent() {
       if (isConfigured) {
         const { data, error } = await supabase.from('site_content').select('value').eq('key', 'about').maybeSingle()
         if (cancelled) return
-        if (error) {
-          if (isMissingTable(error)) setTableMissing(true)
-        } else if (data?.value) {
+        // A missing table just falls back to defaults — the editor stays usable.
+        if (!error && data?.value) {
           setAbout({ ...clone(DEFAULT_ABOUT), ...data.value })
         }
       }
@@ -146,14 +145,30 @@ export default function WebsiteContent() {
     setSaving(false)
     if (error) {
       if (isMissingTable(error)) {
-        setTableMissing(true)
-        toast.error('Run the site_content migration first (see banner above)')
+        toast.error('site_content table missing — run the SQL from supabase-schema.sql')
       } else {
         toast.error('Save failed: ' + (error.message || 'unknown'))
       }
       return
     }
     toast.success('Website content saved — live in a few seconds')
+  }
+
+  // Upload a photo for team member `i` and store its public URL.
+  const uploadMemberPhoto = async (i, file) => {
+    if (!file) return
+    setUploadingIdx(i)
+    try {
+      const url = await uploadPhoto(file, 'team')
+      const arr = [...about.team.members]
+      arr[i] = { ...arr[i], image: url }
+      setArr('team', 'members', arr)
+      toast.success('Photo uploaded')
+    } catch (e) {
+      toast.error('Upload failed: ' + (e?.message || 'try a smaller image'))
+    } finally {
+      setUploadingIdx(null)
+    }
   }
 
   const resetDefaults = () => {
@@ -175,21 +190,6 @@ export default function WebsiteContent() {
         </div>
         <a className="btn btn-ghost" href={`${SITE_URL}/about`} target="_blank" rel="noreferrer" style={{ whiteSpace: 'nowrap' }}>↗ View live page</a>
       </div>
-
-      {tableMissing && (
-        <div className="glass-card" style={{ padding: 16, marginBottom: 18, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.08)' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#f59e0b' }}>⚠️ One-time setup needed</p>
-          <p style={{ fontSize: 12.5, color: 'var(--text-dim, #94a3b8)', marginBottom: 8 }}>
-            The <code>site_content</code> table doesn&apos;t exist yet. Run this in Supabase → SQL Editor, then reload:
-          </p>
-          <pre style={{ fontSize: 11.5, background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 8, overflowX: 'auto', margin: 0 }}>{`create table if not exists site_content (
-  key text primary key,
-  value jsonb not null default '{}'::jsonb,
-  updated_at timestamptz default now()
-);
-alter table site_content disable row level security;`}</pre>
-        </div>
-      )}
 
       {/* Hero */}
       <Section title="Hero (top banner)">
@@ -286,8 +286,18 @@ alter table site_content disable row level security;`}</pre>
               <input className="glass-input" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} value={mem.role}
                 placeholder="Role" onChange={e => { const arr = [...about.team.members]; arr[i] = { ...arr[i], role: e.target.value }; setArr('team', 'members', arr) }} />
             </div>
-            <input className="glass-input" style={{ width: '100%', padding: '9px 12px', fontSize: 13, marginBottom: 8 }} value={mem.image}
-              placeholder="Photo URL" onChange={e => { const arr = [...about.team.members]; arr[i] = { ...arr[i], image: e.target.value }; setArr('team', 'members', arr) }} />
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+              {mem.image
+                ? <img src={mem.image} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-glass, rgba(255,255,255,0.15))' }} />
+                : <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>}
+              <label className="btn btn-ghost" style={{ fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {uploadingIdx === i ? 'Uploading…' : '📤 Upload photo'}
+                <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingIdx === i}
+                  onChange={e => { uploadMemberPhoto(i, e.target.files?.[0]); e.target.value = '' }} />
+              </label>
+              <input className="glass-input" style={{ flex: 1, padding: '9px 12px', fontSize: 12.5 }} value={mem.image}
+                placeholder="…or paste an image URL" onChange={e => { const arr = [...about.team.members]; arr[i] = { ...arr[i], image: e.target.value }; setArr('team', 'members', arr) }} />
+            </div>
             <textarea className="glass-input" style={{ width: '100%', padding: '9px 12px', fontSize: 13, minHeight: 56, resize: 'vertical' }} value={mem.bio}
               placeholder="Short bio" onChange={e => { const arr = [...about.team.members]; arr[i] = { ...arr[i], bio: e.target.value }; setArr('team', 'members', arr) }} />
           </div>
