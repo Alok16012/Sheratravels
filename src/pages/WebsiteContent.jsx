@@ -3,7 +3,7 @@ import { supabase, isConfigured, uploadPhoto } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 // Public website URL — used for the "View live page" link.
-const SITE_URL = 'https://travelshera.netlify.app'
+const SITE_URL = 'https://sheratravelwebsite.netlify.app'
 
 // Must mirror travelshera/src/lib/siteContent.ts `defaultAbout` so a fresh
 // editor (no saved row yet) shows the same content the website falls back to.
