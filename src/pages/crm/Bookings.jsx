@@ -44,13 +44,110 @@ function PickLeadModal({ leads, onPick, onClose }) {
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
 
+function EditBookingModal({ booking, onSave, onClose }) {
+  const [form, setForm] = useState({
+    customer_name: booking.customer_name || '',
+    customer_phone: booking.customer_phone || '',
+    customer_email: booking.customer_email || '',
+    total_amount: booking.total_amount || 0,
+    paid_amount: booking.paid_amount || 0,
+    status: booking.status || 'pending',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!form.customer_name.trim()) { toast.error('Customer name is required'); return }
+    setSaving(true)
+    const total = Number(form.total_amount) || 0
+    const paid = Number(form.paid_amount) || 0
+    try {
+      await onSave(booking.id, {
+        customer_name: form.customer_name.trim(),
+        customer_phone: form.customer_phone.trim(),
+        customer_email: form.customer_email.trim(),
+        total_amount: total,
+        paid_amount: paid,
+        balance_amount: Math.max(0, total - paid),
+        status: form.status,
+      })
+      toast.success('Booking updated')
+      onClose()
+    } catch {
+      // updateBooking already surfaces an error toast
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="glass-card" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 800 }}>Edit booking · {booking.booking_ref}</h3>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <label className="edit-field">
+            <span>Customer name</span>
+            <input className="glass-input" value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} />
+          </label>
+          <label className="edit-field">
+            <span>Phone</span>
+            <input className="glass-input" value={form.customer_phone} onChange={e => setForm({ ...form, customer_phone: e.target.value })} />
+          </label>
+          <label className="edit-field">
+            <span>Email</span>
+            <input className="glass-input" value={form.customer_email} onChange={e => setForm({ ...form, customer_email: e.target.value })} />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <label className="edit-field">
+              <span>Total amount (₹)</span>
+              <input className="glass-input" type="number" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} />
+            </label>
+            <label className="edit-field">
+              <span>Paid amount (₹)</span>
+              <input className="glass-input" type="number" value={form.paid_amount} onChange={e => setForm({ ...form, paid_amount: e.target.value })} />
+            </label>
+          </div>
+          <label className="edit-field">
+            <span>Status</span>
+            <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+              {BOOKING_STATUSES.map(s => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </select>
+          </label>
+          <p className="text-dim" style={{ fontSize: 12 }}>Balance: {fmt(Math.max(0, (Number(form.total_amount) || 0) - (Number(form.paid_amount) || 0)))}</p>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-glass)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button className="btn" onClick={onClose} disabled={saving} style={{ background: '#F1F5F9' }}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Bookings() {
   const navigate = useNavigate()
-  const { bookings, loading, fetchBookings, deleteBooking, getBookingStats } = useBooking()
+  const { bookings, fetchBookings, updateBooking, deleteBooking, getBookingStats } = useBooking()
   const { leads, fetchLeads } = useCRM()
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [showLeadPicker, setShowLeadPicker] = useState(false)
+  const [editingBooking, setEditingBooking] = useState(null)
+
+  const handleDelete = (e, b) => {
+    e.stopPropagation()
+    if (window.confirm(`Delete booking ${b.booking_ref} for ${b.customer_name}? This cannot be undone.`)) {
+      deleteBooking(b.id)
+    }
+  }
+
+  const handleEdit = (e, b) => {
+    e.stopPropagation()
+    setEditingBooking(b)
+  }
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
   useEffect(() => { fetchLeads() }, [fetchLeads])
@@ -149,7 +246,11 @@ export default function Bookings() {
                   {BOOKING_STATUSES.find(s => s.id === b.status)?.label || b.status}
                 </span>
               </div>
-              <button className="view-btn">👁️</button>
+              <div className="booking-actions">
+                <button className="view-btn" title="View" onClick={(e) => { e.stopPropagation(); navigate(`/bookings/${b.id}`) }}>👁️</button>
+                <button className="edit-btn" title="Edit" onClick={(e) => handleEdit(e, b)}>✏️</button>
+                <button className="delete-btn" title="Delete" onClick={(e) => handleDelete(e, b)}>🗑️</button>
+              </div>
             </div>
           ))
         )}
@@ -160,6 +261,14 @@ export default function Bookings() {
           leads={leads}
           onPick={handlePickLead}
           onClose={() => setShowLeadPicker(false)}
+        />
+      )}
+
+      {editingBooking && (
+        <EditBookingModal
+          booking={editingBooking}
+          onSave={updateBooking}
+          onClose={() => setEditingBooking(null)}
         />
       )}
 
@@ -307,7 +416,12 @@ export default function Bookings() {
           background: #F1F5F9;
           border-radius: 20px;
         }
-        .view-btn {
+        .booking-actions {
+          display: flex;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+        .view-btn, .edit-btn, .delete-btn {
           width: 36px;
           height: 36px;
           border-radius: 10px;
@@ -317,6 +431,20 @@ export default function Bookings() {
           cursor: pointer;
           font-size: 14px;
           flex-shrink: 0;
+          transition: all 0.15s;
+        }
+        .view-btn:hover { background: #E2E8F0; }
+        .edit-btn:hover { background: rgba(99,102,241,0.12); border-color: var(--primary); }
+        .delete-btn:hover { background: rgba(239,68,68,0.12); border-color: #ef4444; }
+        .edit-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .edit-field span {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--text-muted);
         }
         
         .empty-state {
@@ -353,7 +481,7 @@ export default function Bookings() {
           .booking-ref { display: none; }
           .booking-info { flex: 1; }
           .booking-amount { order: -1; }
-          .view-btn { width: 32px; height: 32px; font-size: 12px; }
+          .view-btn, .edit-btn, .delete-btn { width: 32px; height: 32px; font-size: 12px; }
         }
         @media (max-width: 480px) {
           .booking-amount { display: none; }
