@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useBooking, BOOKING_STATUSES } from '../../context/BookingContext'
 import { supabase } from '../../lib/supabase'
 import { sendInvoiceEmail, printInvoice, printReceipt } from '../../lib/email'
+import EditBookingModal from '../../components/crm/EditBookingModal'
 import toast from 'react-hot-toast'
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -10,13 +11,21 @@ const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
 export default function BookingDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { currentBooking: booking, payments, loading, fetchBooking, fetchPayments, updateBooking, recordPayment } = useBooking()
+  const { currentBooking: booking, payments, loading, fetchBooking, fetchPayments, updateBooking, deleteBooking, recordPayment } = useBooking()
 
   const [activeTab, setActiveTab] = useState('summary')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [pkg, setPkg] = useState(null)
+  const [showEdit, setShowEdit] = useState(false)
+
+  const handleDelete = async () => {
+    if (window.confirm(`Delete booking ${booking?.booking_ref} for ${booking?.customer_name}? This cannot be undone.`)) {
+      await deleteBooking(booking.id)
+      navigate('/bookings')
+    }
+  }
 
   useEffect(() => {
     fetchBooking(id)
@@ -63,15 +72,25 @@ export default function BookingDetail() {
           </div>
         </div>
         <div className="header-right">
-          <select 
-            className="glass-input status-select" 
+          <select
+            className="glass-input status-select"
             value={booking?.status}
             onChange={e => updateBooking(id, { status: e.target.value })}
           >
             {BOOKING_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
+          <button className="btn action-edit" onClick={() => setShowEdit(true)}>✏️ Edit</button>
+          <button className="btn action-delete" onClick={handleDelete}>🗑️ Delete</button>
         </div>
       </div>
+
+      {showEdit && (
+        <EditBookingModal
+          booking={booking}
+          onSave={updateBooking}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
 
       <div className="glass-card progress-grid animate-fade" style={{ animationDelay: '0.1s' }}>
         <div className="stat-pill">
@@ -242,10 +261,16 @@ export default function BookingDetail() {
       </div>
 
       <style jsx>{`
-        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; gap: 16px; flex-wrap: wrap; }
         .header-left { display: flex; align-items: center; gap: 20px; }
+        .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .title-block h2 { font-size: 28px; font-weight: 800; margin-bottom: 2px; }
         .status-select { width: 160px; height: 42px; padding: 0 12px; font-weight: 700; }
+        .action-edit, .action-delete { height: 42px; font-size: 13px; font-weight: 700; padding: 0 16px; }
+        .action-edit { background: #F1F5F9; color: var(--text-bright); border: 1px solid var(--border-glass); }
+        .action-edit:hover { background: rgba(99,102,241,0.12); border-color: var(--primary); }
+        .action-delete { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        .action-delete:hover { background: rgba(239,68,68,0.18); }
 
         .progress-grid { padding: 32px; display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 32px; margin-bottom: 32px; align-items: center; }
         .stat-pill .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block; }
