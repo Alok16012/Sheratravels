@@ -29,6 +29,7 @@ export default function MainLayout({ children, headerActions }) {
       items: [
         { path: '/leads', label: 'Leads', icon: '👥', module: 'leads' },
         { path: '/bookings', label: 'Bookings', icon: '📅', module: 'bookings' },
+        { path: '/newsletter', label: 'Newsletter', icon: '✉️', module: 'leads' },
       ],
     },
     {
