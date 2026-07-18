@@ -55,6 +55,7 @@ export default function MainLayout({ children, headerActions }) {
         { path: '/admin', label: 'Settings', icon: '⚙️', module: 'admin' },
         ...(admin ? [{ path: '/users', label: 'Users & Roles', icon: '🔐' }] : []),
         ...(admin ? [{ path: '/website-content', label: 'Website Content', icon: '🌐' }] : []),
+        ...(admin ? [{ path: '/website-packages', label: 'Website Packages', icon: '📦' }] : []),
       ],
     },
   ]
